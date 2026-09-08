@@ -1,0 +1,33 @@
+# Evidencia CRUD real vía API Gateway  (https://3wwncomjhk.execute-api.us-east-1.amazonaws.com)
+# Fecha: 2026-09-07T22:33:41-03:00
+
+########## 1) 401 - GET catalogo SIN token ##########
+{"message":"Unauthorized"}
+<<HTTP 401>>
+########## 2) 200 - GET catalogo (admin) ##########
+[{"id":1,"nombre":"Laboratorio de Redes 3","tipo":"LABORATORIO","stock":1,"disponible":true},{"id":2,"nombre":"Laboratorio de Electronica 1","tipo":"LABORATORIO","stock":1,"disponible":true},{"id":3,"nombre":"Osciloscopio Rigol DS1054Z","tipo":"EQUIPO","stock":8,"disponible":true},{"id":4,"nombre":"Kit Arduino Uno","tipo":"EQUIPO","stock":25,"disponible":true},{"id":5,"nombre":"Cable de red Cat6 (metro)","tipo":"INSUMO","stock":300,"disponible":true}]
+<<HTTP 200>>
+########## 3) 201 - POST catalogo (admin) crea 'Laboratorio de IoT' ##########
+{"id":6,"nombre":"Laboratorio de IoT","tipo":"LABORATORIO","stock":2,"disponible":true}
+<<HTTP 201>>
+########## 4) 200 - PUT catalogo id=1 (admin) ##########
+{"id":1,"nombre":"Laboratorio de Redes 3","tipo":"LABORATORIO","stock":3,"disponible":true}
+<<HTTP 200>>
+########## 5) 403 - POST catalogo con usuario NO admin ##########
+
+<<HTTP 403>>
+########## 6) 200 - GET reservas (admin) ##########
+[{"id":1,"nombre":"Ana Perez","rut":"12345678-9","fecha":"2026-09-09T01:18:07.313525","productoId":1,"estado":"SOLICITADA"},{"id":2,"nombre":"Bruno Soto","rut":"9876543-2","fecha":"2026-09-10T01:18:07.441434","productoId":3,"estado":"APROBADA"}]
+<<HTTP 200>>
+########## 7) 201 - POST reserva valida (admin) ##########
+{"id":3,"nombre":"Ana Perez","rut":"12345678-9","fecha":"2026-09-20T10:30:00","productoId":1,"estado":"SOLICITADA"}
+<<HTTP 201>>
+########## 8) 400 - POST reserva RUT/nombre invalidos (validacion de esquema) ##########
+{"error":"Bad Request","message":"La validacion de esquema fallo","errores":{"rut":"El rut debe tener formato 12345678-9 (sin puntos)","nombre":"El nombre es obligatorio"},"status":400}
+<<HTTP 400>>
+########## 9) 200 - PUT estado reserva 2 -> EN_USO (admin/operador) ##########
+{"id":2,"nombre":"Bruno Soto","rut":"9876543-2","fecha":"2026-09-10T01:18:07.441434","productoId":3,"estado":"EN_USO"}
+<<HTTP 200>>
+########## 10) 204 - DELETE reserva 1 (admin) ##########
+
+<<HTTP 204>>

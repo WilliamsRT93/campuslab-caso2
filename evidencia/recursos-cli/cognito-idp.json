@@ -1,0 +1,10 @@
+{
+    "Providers": [
+        {
+            "ProviderName": "EntraID",
+            "ProviderType": "OIDC",
+            "LastModifiedDate": 1788829996.398,
+            "CreationDate": 1788829996.398
+        }
+    ]
+}

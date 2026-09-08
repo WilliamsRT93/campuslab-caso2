@@ -1,0 +1,10 @@
+[
+    {
+        "Name": "cognito-jwt",
+        "Type": "JWT",
+        "Issuer": "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_dBOQeniQq",
+        "Audience": [
+            "6r3af8ucc96okla0ujph9pru4a"
+        ]
+    }
+]
