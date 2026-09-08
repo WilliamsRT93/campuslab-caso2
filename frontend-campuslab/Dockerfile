@@ -1,0 +1,33 @@
+# ---- build ----
+FROM node:22-alpine AS build
+WORKDIR /app
+
+# Variables VITE_* inyectadas en tiempo de build (Vite las hornea en el bundle).
+ARG VITE_AZURE_CLIENT_ID
+ARG VITE_AZURE_TENANT_ID
+ARG VITE_AZURE_REDIRECT_URI
+ARG VITE_COGNITO_DOMAIN
+ARG VITE_COGNITO_CLIENT_ID
+ARG VITE_COGNITO_REDIRECT_URI
+ARG VITE_COGNITO_IDP
+ARG VITE_API_BASE_URL
+ENV VITE_AZURE_CLIENT_ID=$VITE_AZURE_CLIENT_ID \
+    VITE_AZURE_TENANT_ID=$VITE_AZURE_TENANT_ID \
+    VITE_AZURE_REDIRECT_URI=$VITE_AZURE_REDIRECT_URI \
+    VITE_COGNITO_DOMAIN=$VITE_COGNITO_DOMAIN \
+    VITE_COGNITO_CLIENT_ID=$VITE_COGNITO_CLIENT_ID \
+    VITE_COGNITO_REDIRECT_URI=$VITE_COGNITO_REDIRECT_URI \
+    VITE_COGNITO_IDP=$VITE_COGNITO_IDP \
+    VITE_API_BASE_URL=$VITE_API_BASE_URL
+
+COPY package.json package-lock.json* ./
+RUN npm install
+COPY . .
+RUN npm run build
+
+# ---- runtime ----
+FROM nginx:alpine
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/dist /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]

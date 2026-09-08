@@ -1,0 +1,162 @@
+{
+  "info": {
+    "name": "CampusLab - Caso 2 (API Gateway + BFF + Cognito)",
+    "description": "Coleccion para demostrar el flujo JWT -> API Gateway -> BFF -> microservicios. Incluye casos 200, 400 (validacion de esquema), 401 (sin token) y 403 (rol sin permiso). Definir las variables base_url, token (Cognito access token de un usuario Admin) y user_token (usuario sin rol Admin).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "base_url", "value": "https://<api-id>.execute-api.us-east-1.amazonaws.com" },
+    { "key": "token", "value": "<cognito-access-token-admin>" },
+    { "key": "user_token", "value": "<cognito-access-token-sin-admin>" }
+  ],
+  "item": [
+    {
+      "name": "0. Identidad",
+      "item": [
+        {
+          "name": "GET /api/me (roles del token)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/api/me", "host": ["{{base_url}}"], "path": ["api", "me"] }
+          },
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "pm.test('trae roles', () => pm.expect(pm.response.json()).to.have.property('roles'));"
+            ] } }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "1. Catalogo (productos)",
+      "item": [
+        {
+          "name": "GET listar productos",
+          "request": {
+            "method": "GET", "header": [],
+            "url": { "raw": "{{base_url}}/api/catalog/resources", "host": ["{{base_url}}"], "path": ["api", "catalog", "resources"] }
+          },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));" ] } } ]
+        },
+        {
+          "name": "GET producto por id",
+          "request": {
+            "method": "GET", "header": [],
+            "url": { "raw": "{{base_url}}/api/catalog/resources/1", "host": ["{{base_url}}"], "path": ["api", "catalog", "resources", "1"] }
+          }
+        },
+        {
+          "name": "POST crear producto (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"nombre\": \"Laboratorio de IoT\",\n  \"tipo\": \"LABORATORIO\",\n  \"stock\": 1,\n  \"disponible\": true\n}" },
+            "url": { "raw": "{{base_url}}/api/catalog/resources", "host": ["{{base_url}}"], "path": ["api", "catalog", "resources"] }
+          },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('201 Created', () => pm.response.to.have.status(201));" ] } } ]
+        },
+        {
+          "name": "PUT actualizar producto (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"nombre\": \"Laboratorio de Redes 3\",\n  \"tipo\": \"LABORATORIO\",\n  \"stock\": 2,\n  \"disponible\": true\n}" },
+            "url": { "raw": "{{base_url}}/api/catalog/resources/1", "host": ["{{base_url}}"], "path": ["api", "catalog", "resources", "1"] }
+          }
+        },
+        {
+          "name": "DELETE producto (Admin)",
+          "request": {
+            "method": "DELETE", "header": [],
+            "url": { "raw": "{{base_url}}/api/catalog/resources/5", "host": ["{{base_url}}"], "path": ["api", "catalog", "resources", "5"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Reservas",
+      "item": [
+        {
+          "name": "GET listar reservas",
+          "request": {
+            "method": "GET", "header": [],
+            "url": { "raw": "{{base_url}}/api/bookings", "host": ["{{base_url}}"], "path": ["api", "bookings"] }
+          }
+        },
+        {
+          "name": "POST crear reserva",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"nombre\": \"Ana Perez\",\n  \"rut\": \"12345678-9\",\n  \"fecha\": \"2026-09-20T10:30:00\",\n  \"productoId\": 1\n}" },
+            "url": { "raw": "{{base_url}}/api/bookings", "host": ["{{base_url}}"], "path": ["api", "bookings"] }
+          },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('201 Created', () => pm.response.to.have.status(201));" ] } } ]
+        },
+        {
+          "name": "PUT cambiar estado (Admin/Operador)",
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"APROBADA\"\n}" },
+            "url": { "raw": "{{base_url}}/api/bookings/1/status", "host": ["{{base_url}}"], "path": ["api", "bookings", "1", "status"] }
+          }
+        },
+        {
+          "name": "DELETE reserva",
+          "request": {
+            "method": "DELETE", "header": [],
+            "url": { "raw": "{{base_url}}/api/bookings/1", "host": ["{{base_url}}"], "path": ["api", "bookings", "1"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Casos de seguridad y validacion",
+      "item": [
+        {
+          "name": "401 - GET sin token",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET", "header": [],
+            "url": { "raw": "{{base_url}}/api/catalog/resources", "host": ["{{base_url}}"], "path": ["api", "catalog", "resources"] }
+          },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('401 Unauthorized', () => pm.response.to.have.status(401));" ] } } ]
+        },
+        {
+          "name": "403 - POST producto con usuario NO Admin",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{user_token}}", "type": "string" } ] },
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"nombre\": \"No permitido\",\n  \"tipo\": \"EQUIPO\",\n  \"stock\": 1,\n  \"disponible\": true\n}" },
+            "url": { "raw": "{{base_url}}/api/catalog/resources", "host": ["{{base_url}}"], "path": ["api", "catalog", "resources"] }
+          },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('403 Forbidden', () => pm.response.to.have.status(403));" ] } } ]
+        },
+        {
+          "name": "400 - POST reserva con RUT invalido (validacion de esquema)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"nombre\": \"\",\n  \"rut\": \"rut-malo\",\n  \"fecha\": \"2026-09-20T10:30:00\",\n  \"productoId\": 1\n}" },
+            "url": { "raw": "{{base_url}}/api/bookings", "host": ["{{base_url}}"], "path": ["api", "bookings"] }
+          },
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('400 Bad Request', () => pm.response.to.have.status(400));" ] } } ]
+        }
+      ]
+    }
+  ]
+}

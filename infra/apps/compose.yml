@@ -1,0 +1,60 @@
+# Despliegue de las apps de CampusLab en la instancia EC2 (ec2-apps).
+# Levanta: catalogo, reservas, BFF y frontend. Kafka/KPI/auditoria quedan fuera del alcance.
+#
+#   cd infra/apps && cp .env.example .env   # completar con los datos reales de Cognito/Entra
+#   docker compose up -d --build
+#
+services:
+  catalog:
+    build: ../../ms-campuslab-catalog
+    container_name: campuslab-catalog
+    expose:
+      - "8081"
+    networks: [campuslab]
+    restart: unless-stopped
+
+  bookings:
+    build: ../../ms-campuslab-bookings
+    container_name: campuslab-bookings
+    expose:
+      - "8082"
+    networks: [campuslab]
+    restart: unless-stopped
+
+  bff:
+    build: ../../ms-campuslab-bff
+    container_name: campuslab-bff
+    environment:
+      SPRING_PROFILES_ACTIVE: cognito
+      COGNITO_ISSUER_URI: ${COGNITO_ISSUER_URI}
+      COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN}
+      CATALOG_URL: http://catalog:8081
+      BOOKINGS_URL: http://bookings:8082
+    ports:
+      - "8080:8080"
+    depends_on: [catalog, bookings]
+    networks: [campuslab]
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ../../frontend-campuslab
+      args:
+        VITE_AZURE_CLIENT_ID: ${VITE_AZURE_CLIENT_ID}
+        VITE_AZURE_TENANT_ID: ${VITE_AZURE_TENANT_ID}
+        VITE_AZURE_REDIRECT_URI: ${VITE_AZURE_REDIRECT_URI}
+        VITE_COGNITO_DOMAIN: ${VITE_COGNITO_DOMAIN}
+        VITE_COGNITO_CLIENT_ID: ${VITE_COGNITO_CLIENT_ID}
+        VITE_COGNITO_REDIRECT_URI: ${VITE_COGNITO_REDIRECT_URI}
+        VITE_COGNITO_IDP: ${VITE_COGNITO_IDP}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+    container_name: campuslab-frontend
+    ports:
+      - "8090:80"
+    networks: [campuslab]
+    restart: unless-stopped
+
+networks:
+  campuslab:
+    driver: bridge
