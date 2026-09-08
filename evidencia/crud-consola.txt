@@ -1,0 +1,26 @@
+# Sesion de consola — CRUD real via API Gateway (https://3wwncomjhk.execute-api.us-east-1.amazonaws.com)
+# TOKEN=<access token Cognito>   (admin)
+
+$ curl $B/api/catalog/resources                     # sin token
+{"message":"Unauthorized"}
+  -> HTTP 401
+
+$ curl -H "Authorization: Bearer $TOKEN" $B/api/catalog/resources
+[{"id":1,"nombre":"Laboratorio de Redes 3","tipo":"LABORATORIO","stock":2,"disponible":true},{"id":2,"nombre":"Laboratorio de Electronica 1","tipo":"LABORATORIO","stock":1,"disponible":true},{"id":3,"nombre":"Osciloscopio Rigol DS1054Z","tipo":"EQUIPO","stock":8,"disponible":true},{"id":4,"nombre":"Kit Arduino Uno","tipo":"EQUIPO","stock":25,"disponible":true},{"id":6,"nombre":"Laboratorio de IoT","tipo":"LABORATORIO","stock":2,"disponible":true},{"id":7,"nombre":"Laboratorio de IoT","tipo":"LABORATORIO","stock":1,"disponible":true}]
+  -> HTTP 200
+
+$ curl -X POST -H "Authorization: Bearer $TOKEN" -d '{...IoT...}' $B/api/catalog/resources
+{"id":8,"nombre":"Laboratorio de IoT","tipo":"LABORATORIO","stock":2,"disponible":true}
+  -> HTTP 201
+
+$ curl -X POST -H "Authorization: Bearer $USER_TOKEN" -d '{...}' $B/api/catalog/resources   # rol NO admin
+  -> HTTP 403
+
+$ curl -X POST -H "Authorization: Bearer $TOKEN" -d '{rut invalido}' $B/api/bookings
+{"error":"Bad Request","message":"La validacion de esquema fallo","errores":{"rut":"El rut debe tener formato 12345678-9 (sin puntos)","nombre":"El nombre es obligatorio"},"status":400}
+  -> HTTP 400
+
+$ curl -X POST -H "Authorization: Bearer $TOKEN" -d '{reserva valida}' $B/api/bookings
+{"id":5,"nombre":"Ana Perez","rut":"12345678-9","fecha":"2026-09-20T10:30:00","productoId":1,"estado":"SOLICITADA"}
+  -> HTTP 201
+

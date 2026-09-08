@@ -18,3 +18,5 @@ dist/
 *.iml
 .DS_Store
 *.log
+evidencia/postman/reporte-postman.html
+evidencia/postman/reporte-postman.json
