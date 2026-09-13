@@ -1,0 +1,40 @@
+
+============================================================
+0) Contexto
+============================================================
+  User Pool: us-east-1_dBOQeniQq   App Client: 6r3af8ucc96okla0ujph9pru4a   Región: us-east-1
+{
+    "UserId": "AROAUHAJTCMSNA2SSQT4O:user3284908=w.rivas",
+    "Account": "289930416932",
+    "Arn": "arn:aws:sts::289930416932:assumed-role/voclabs/user3284908=w.rivas"
+}
+
+============================================================
+1) LOGIN AUTORIZADO — credenciales válidas (admin y usuario)
+============================================================
+  [OK-admin] usuario=demo.admin  ->  ✅ AUTORIZADO (200) — Cognito emitió tokens
+      3600 seg,  IdToken/AccessToken/RefreshToken presentes
+  [OK-user] usuario=demo.user  ->  ✅ AUTORIZADO (200) — Cognito emitió tokens
+      3600 seg,  IdToken/AccessToken/RefreshToken presentes
+
+============================================================
+2) NO AUTORIZADO — contraseña incorrecta
+============================================================
+  [pass-erronea] usuario=demo.admin  ->  ⛔ NO AUTORIZADO — An error occurred (NotAuthorizedException)
+      motivo: Incorrect username or password.
+
+============================================================
+3) NO AUTORIZADO — usuario inexistente
+============================================================
+  [user-inexistente] usuario=usuario.fantasma  ->  ⛔ NO AUTORIZADO — An error occurred (UserNotFoundException)
+      motivo: User does not exist.
+
+============================================================
+4) NO AUTORIZADO — contraseña vacía / campos faltantes
+============================================================
+  [pass-vacia] usuario=demo.user  ->  ⛔ NO AUTORIZADO — An error occurred (InvalidParameterException)
+      motivo: Missing required parameter PASSWORD
+
+============================================================
+FIN — esperado: 2 AUTORIZADOS (admin, user) y 3 NO AUTORIZADOS (pass mala, user inexistente, pass vacía)
+============================================================

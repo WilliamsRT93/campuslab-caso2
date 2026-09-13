@@ -1,0 +1,59 @@
+
+============================================================
+0) Identidad AWS CLI
+============================================================
+{
+    "UserId": "AROAUHAJTCMSNA2SSQT4O:user3284908=w.rivas",
+    "Account": "289930416932",
+    "Arn": "arn:aws:sts::289930416932:assumed-role/voclabs/user3284908=w.rivas"
+}
+
+============================================================
+1) GET catalog SIN token  -> se espera 401 (API Gateway)
+============================================================
+HTTP 401
+  body: {"message":"Unauthorized"}
+
+============================================================
+2) Obtener tokens JWT reales de Cognito (demo.admin / demo.user)
+============================================================
+  admin token len: 1069   user token len: 1031
+  claims admin:
+    "cognito:groups": [
+    "client_id": "6r3af8ucc96okla0ujph9pru4a",
+    "token_use": "access",
+    "username": "demo.admin"
+
+============================================================
+3) GET catalog CON token admin -> 200
+============================================================
+HTTP 200
+  body: [{"id":1,"nombre":"Laboratorio de Redes 3","tipo":"LABORATORIO","stock":1,"disponible":true},{"id":2,"nombre":"Laboratorio de Electronica 1","tipo":"LABORATORIO","stock":1,"disponible":true},{"id":3,"nombre":"Osciloscopio Rigol DS1054Z","tipo":"EQUIPO","stock":8,"disponible":true},{"id":4,"nombre":"Kit Arduino Uno","tipo":"EQUIPO","stock":25,"disponible":true},{"id":5,"nombre":"Cable de red Cat6 (
+
+============================================================
+4) POST catalog como ADMIN -> 201 Created
+============================================================
+HTTP 201
+  body: {"id":6,"nombre":"Laboratorio de IoT","tipo":"LABORATORIO","stock":1,"disponible":true}
+
+============================================================
+5) POST catalog como USUARIO (sin rol Admin) -> 403 Forbidden (BFF)
+============================================================
+HTTP 403
+  body: 
+
+============================================================
+6) POST bookings con RUT invalido y sin nombre -> 400 (validacion de esquema)
+============================================================
+HTTP 400
+  body: {"error":"Bad Request","message":"La validacion de esquema fallo","errores":{"rut":"El rut debe tener formato 12345678-9 (sin puntos)","nombre":"El nombre es obligatorio"},"status":400}
+
+============================================================
+7) POST bookings valido como ADMIN -> 201 (SOLICITADA)
+============================================================
+HTTP 201
+  body: {"id":3,"nombre":"Reserva demo","rut":"12345678-9","fecha":"2026-09-20T10:30:00","productoId":1,"estado":"SOLICITADA"}
+
+============================================================
+FIN — resumen esperado: 401 . 200 . 201 . 403 . 400 . 201
+============================================================
