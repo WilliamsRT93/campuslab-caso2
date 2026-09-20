@@ -20,3 +20,9 @@ dist/
 *.log
 evidencia/postman/reporte-postman.html
 evidencia/postman/reporte-postman.json
+
+# Entregables académicos (informe, presentaciones, manual) — no se versionan
+Informe_*.pdf
+Presentacion_*.pdf
+Presentacion_*.pptx
+Manual_*.pdf
