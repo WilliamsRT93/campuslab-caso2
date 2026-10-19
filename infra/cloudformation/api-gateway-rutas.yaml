@@ -1,0 +1,121 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  API Gateway (HTTP API) de CampusLab, definido como infraestructura como
+  codigo (EP3 - requisito "no usar proxy manual, usar CloudFormation para
+  las rutas"). Reemplaza los comandos sueltos de `aws apigatewayv2` que se
+  venian corriendo a mano cada vez que cambiaba la IP del backend.
+  Actualizar solo el parametro BackendUrl (y FrontendOrigin si corresponde)
+  y volver a desplegar el stack reemplaza todo lo que antes requeria 2
+  comandos manuales distintos.
+
+Parameters:
+  BackendUrl:
+    Type: String
+    Description: >
+      URL del backend BFF (http://<IP-actual-EC2>:8080/{proxy}). Se mantiene fija con IP elastica; actualizar solo si se reasigna
+      la IP elastica de la EC2.
+    Default: http://100.60.125.97:8080/{proxy}
+
+  FrontendOriginNube:
+    Type: String
+    Description: Origen HTTPS del frontend desplegado en la EC2 (IP actual).
+    Default: https://100.60.125.97
+
+  FrontendOriginLocal:
+    Type: String
+    Description: Origen del frontend corriendo local (npm run dev).
+    Default: http://localhost:5173
+
+  CognitoIssuer:
+    Type: String
+    Default: https://cognito-idp.us-east-1.amazonaws.com/us-east-1_dBOQeniQq
+
+  CognitoClientId:
+    Type: String
+    Default: 6r3af8ucc96okla0ujph9pru4a
+
+Resources:
+
+  CampusLabHttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: campuslab-http-api-cfn
+      ProtocolType: HTTP
+      CorsConfiguration:
+        AllowOrigins:
+          - !Ref FrontendOriginNube
+          - !Ref FrontendOriginLocal
+        AllowMethods: [GET, POST, PUT, DELETE, OPTIONS]
+        AllowHeaders: [authorization, content-type]
+
+  CognitoJwtAuthorizer:
+    Type: AWS::ApiGatewayV2::Authorizer
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      AuthorizerType: JWT
+      Name: cognito-jwt-cfn
+      IdentitySource:
+        - $request.header.Authorization
+      JwtConfiguration:
+        Audience:
+          - !Ref CognitoClientId
+        Issuer: !Ref CognitoIssuer
+
+  BackendIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      IntegrationUri: !Ref BackendUrl
+      PayloadFormatVersion: '1.0'
+
+  RouteGet:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      RouteKey: GET /{proxy+}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoJwtAuthorizer
+      Target: !Join ['/', ['integrations', !Ref BackendIntegration]]
+
+  RoutePost:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      RouteKey: POST /{proxy+}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoJwtAuthorizer
+      Target: !Join ['/', ['integrations', !Ref BackendIntegration]]
+
+  RoutePut:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      RouteKey: PUT /{proxy+}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoJwtAuthorizer
+      Target: !Join ['/', ['integrations', !Ref BackendIntegration]]
+
+  RouteDelete:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      RouteKey: DELETE /{proxy+}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoJwtAuthorizer
+      Target: !Join ['/', ['integrations', !Ref BackendIntegration]]
+
+  DefaultStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      StageName: $default
+      AutoDeploy: true
+
+Outputs:
+  ApiEndpoint:
+    Description: URL base del API Gateway
+    Value: !Sub https://${CampusLabHttpApi}.execute-api.${AWS::Region}.amazonaws.com
+  ApiId:
+    Value: !Ref CampusLabHttpApi

@@ -8,6 +8,15 @@ services:
   catalog:
     build: ../../ms-campuslab-catalog
     container_name: campuslab-catalog
+    environment:
+      DB_URL: ${CATALOG_DB_URL}
+      DB_DRIVER: org.postgresql.Driver
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      RABBITMQ_HOST: ${RABBITMQ_HOST}
+      RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASS: ${RABBITMQ_PASS}
     expose:
       - "8081"
     networks: [campuslab]
@@ -16,6 +25,15 @@ services:
   bookings:
     build: ../../ms-campuslab-bookings
     container_name: campuslab-bookings
+    environment:
+      DB_URL: ${BOOKINGS_DB_URL}
+      DB_DRIVER: org.postgresql.Driver
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      RABBITMQ_HOST: ${RABBITMQ_HOST}
+      RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASS: ${RABBITMQ_PASS}
     expose:
       - "8082"
     networks: [campuslab]

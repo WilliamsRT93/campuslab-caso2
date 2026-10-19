@@ -26,3 +26,9 @@ Informe_*.pdf
 Presentacion_*.pdf
 Presentacion_*.pptx
 Manual_*.pdf
+
+# Credenciales locales y documentos internos de equipo (llevan contraseñas)
+.env.*.local
+.~lock.*
+Documento_Equipo_*.pdf
+evidencia/documento-equipo-*/
