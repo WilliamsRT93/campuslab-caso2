@@ -1,0 +1,48 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: ms-campuslab-rabbitmq-admin
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:admin}
+    password: ${RABBITMQ_PASS:admin123}
+    virtual-host: /
+    listener:
+      simple:
+        acknowledge-mode: manual
+        prefetch: 1
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 1000
+
+# Nombres de colas, exchanges y bindings CENTRALIZADOS (rubrica EP3, indicador 1, 12%).
+# Nada de nombres sueltos escritos a mano en las clases de negocio.
+campuslab:
+  rabbitmq:
+    exchange: campuslab.exchange
+    dlx: campuslab.dlx
+    queues:
+      notificaciones: cola-notificaciones
+      documentos: cola-documentos
+      auditoria: cola-auditoria
+    dlq-suffix: "-dlq"
+    routing-keys:
+      notificaciones: reserva.notificacion
+      documentos: reserva.documento
+      auditoria: reserva.auditoria
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
