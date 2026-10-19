@@ -1,6 +1,7 @@
 package cl.duoc.campuslab.bff;
 
 import jakarta.servlet.http.HttpServletResponse;
+import java.util.Arrays;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -91,12 +92,15 @@ public class SecurityConfig {
                 .build();
     }
 
-    /** CORS: solo el origen del frontend, con los metodos y headers necesarios (sin sobrepermisos). */
+    /** CORS: solo los origenes del frontend permitidos (lista separada por comas), sin sobrepermisos. */
     @Bean
     CorsConfigurationSource corsConfigurationSource(
-            @Value("${campuslab.cors.allowed-origin:http://localhost:5173}") String allowedOrigin) {
+            @Value("${campuslab.cors.allowed-origins:http://localhost:5173}") String allowedOrigins) {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of(allowedOrigin));
+        config.setAllowedOrigins(Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(origin -> !origin.isBlank())
+                .toList());
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

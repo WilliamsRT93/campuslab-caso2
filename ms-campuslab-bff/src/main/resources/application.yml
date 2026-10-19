@@ -11,7 +11,7 @@ spring:
 
 campuslab:
   cors:
-    allowed-origin: ${FRONTEND_ORIGIN:http://localhost:5173}
+    allowed-origins: ${FRONTEND_ORIGIN:http://localhost:5173}
   downstream:
     catalog-url: ${CATALOG_URL:http://localhost:8081}
     bookings-url: ${BOOKINGS_URL:http://localhost:8082}
