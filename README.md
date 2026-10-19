@@ -20,6 +20,24 @@ AWS API Gateway (HTTP API)  ──JWT Authorizer (issuer + client_id)──►  
                                                                           └─► ms-campuslab-bookings (reservas)
 ```
 
+### Mensajería asíncrona con RabbitMQ (EP3)
+
+```
+ms-campuslab-bookings ──► campuslab.exchange ──► cola-notificaciones ──► NotificacionListener
+   (crear reserva)            (direct)      ├──► cola-documentos      ──► DocumentoListener
+ms-campuslab-catalog  ──────────────────────┴──► cola-auditoria       ──► AuditoriaListener
+                                  │
+                       campuslab.dlx (dead-letter) ──► cola-*-dlq  (una DLQ por cola)
+
+ms-campuslab-rabbitmq-admin: único dueño de la topología (declara colas, exchanges,
+bindings y DLQ) y expone una API REST con Swagger para gestionarlos en caliente.
+```
+
+- **Cluster RabbitMQ de 2 nodos** en una EC2 exclusiva con IP elástica; panel nativo en el puerto `15672`.
+- Los listeners confirman con **ACK/NACK manual**: un mensaje con payload `FORZAR_FALLO` se rechaza sin reencolar y cae en su DLQ (lo usa la demo del panel Admin).
+- **Base de datos RDS PostgreSQL**, una base por microservicio (`campuslab_bookings`, `campuslab_catalog`). Sin variables de entorno usan H2 en memoria, para desarrollo local.
+- Las rutas del API Gateway se gestionan con la plantilla [`infra/cloudformation/api-gateway-rutas.yaml`](infra/cloudformation/api-gateway-rutas.yaml), sin proxy manual.
+
 Diagrama completo y flujo detallado en [`docs/arquitectura.md`](docs/arquitectura.md).
 
 ## Estructura del repositorio
@@ -28,12 +46,14 @@ Diagrama completo y flujo detallado en [`docs/arquitectura.md`](docs/arquitectur
 Caso2-CampusLab/
 ├── frontend-campuslab/      Frontend React + Vite + TypeScript (MSAL + Cognito PKCE)
 ├── ms-campuslab-bff/        BFF Spring Boot + Spring Security (valida JWT, roles, CORS)
-├── ms-campuslab-catalog/    Microservicio de catálogo (CRUD productos, JPA/H2)
-├── ms-campuslab-bookings/   Microservicio de reservas (CRUD + validación nombre/rut/fecha)
+├── ms-campuslab-catalog/    Microservicio de catálogo (CRUD productos, JPA, publica auditoría)
+├── ms-campuslab-bookings/   Microservicio de reservas (CRUD + validación; publica notificaciones y documentos)
+├── ms-campuslab-rabbitmq-admin/  Administrador de la topología RabbitMQ (REST + Swagger) y monitor-colas.sh
 ├── infra/
 │   ├── apps/                docker-compose para EC2 + script de aprovisionamiento
 │   ├── cognito/             scripts Cognito + federación Entra ID
-│   └── apigateway/          script API Gateway (HTTP API + JWT Authorizer, sin Lambda)
+│   ├── apigateway/          script API Gateway (HTTP API + JWT Authorizer, sin Lambda)
+│   └── cloudformation/      plantilla de rutas del API Gateway (reemplaza el proxy manual)
 ├── postman/                 colección de pruebas (200 / 400 / 401 / 403)
 └── docs/                    arquitectura, guía de despliegue y de demostración
 ```
@@ -52,9 +72,13 @@ Caso2-CampusLab/
 - **Productos de prueba** y **reservas de prueba** precargados.
 - **Diagrama de arquitectura** y **colección Postman** para la demostración.
 
+- **Login con Microsoft o con usuario y contraseña**: el segundo camino va directo al Hosted UI de Cognito (sin segundo factor); ambos emiten el mismo JWT.
+- **Demo de colas muertas**: pestaña "Mensajería" visible solo para el rol Admin.
+- **RabbitMQ** con 3 colas + 3 DLQ, cluster de 2 nodos, y **RDS PostgreSQL** (ver arriba).
+
 ## Fuera de alcance (por decisión del encargo)
 
-Kafka / streaming, KPIs / reportería, auditoría por streaming y **AWS Lambda**.
+Kafka / streaming, KPIs / reportería y **AWS Lambda**. La mensajería de este proyecto es RabbitMQ; SNS/SQS solo se trata de forma teórica en el informe de la EP2.
 
 ## Puesta en marcha rápida (local)
 
@@ -69,6 +93,10 @@ cd ms-campuslab-bff      && mvn spring-boot:run -Dspring-boot.run.profiles=local
 # Frontend
 cd frontend-campuslab && cp .env.example .env && npm install && npm run dev   # :5173
 ```
+
+Para usar RDS y RabbitMQ reales, cada microservicio lee estas variables (ver `infra/apps/.env.example`):
+`DB_URL`, `DB_DRIVER`, `DB_USER`, `DB_PASSWORD`, `RABBITMQ_HOST`, `RABBITMQ_PORT`, `RABBITMQ_USER`, `RABBITMQ_PASS`.
+El administrador de RabbitMQ corre en `:8083` con Swagger en `/swagger-ui.html`.
 
 Despliegue completo en la nube: [`docs/guia-despliegue.md`](docs/guia-despliegue.md).
 Demostración con Postman: [`docs/guia-demostracion.md`](docs/guia-demostracion.md).
