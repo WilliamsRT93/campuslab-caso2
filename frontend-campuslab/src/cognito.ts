@@ -16,7 +16,7 @@ interface CognitoTokenResponse {
  * Inicia el flujo Authorization Code con PKCE contra Cognito Hosted UI.
  * Si hay un proveedor federado configurado (Entra), salta directo al login de Microsoft.
  */
-export async function loginWithCognito(): Promise<void> {
+export async function loginWithCognito(directo = false): Promise<void> {
   const verifier = createCodeVerifier();
   const challenge = await createCodeChallenge(verifier);
   sessionStorage.setItem(VERIFIER_KEY, verifier);
@@ -29,7 +29,7 @@ export async function loginWithCognito(): Promise<void> {
     code_challenge_method: 'S256',
     code_challenge: challenge,
   });
-  if (cognitoConfig.identityProvider) {
+  if (!directo && cognitoConfig.identityProvider) {
     params.set('identity_provider', cognitoConfig.identityProvider);
   }
   window.location.assign(`${cognitoConfig.domain}/oauth2/authorize?${params.toString()}`);

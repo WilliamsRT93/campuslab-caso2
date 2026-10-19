@@ -13,9 +13,10 @@ import {
 } from './cognito';
 import { ProductosPanel } from './components/ProductosPanel';
 import { ReservasPanel } from './components/ReservasPanel';
+import { MensajeriaPanel } from './components/MensajeriaPanel';
 import './App.css';
 
-type Tab = 'productos' | 'reservas';
+type Tab = 'productos' | 'reservas' | 'mensajeria';
 
 export default function App() {
   const { instance, accounts, inProgress } = useMsal();
@@ -78,17 +79,21 @@ export default function App() {
   const cerrarCognito = () => logoutFromCognito();
 
   // --- Pantalla 1: login con Microsoft (MSAL) ---
-  if (!isAuthenticated) {
+  if (!isAuthenticated && !cognitoToken) {
     return (
       <main className="shell">
         <div className="card login-card">
           <p className="kicker">CampusLab · Cloud Native</p>
           <h1>Reserva de laboratorios y equipos</h1>
           <p className="intro">
-            Inicia sesion con tu cuenta institucional de Microsoft para acceder a la plataforma.
+            Inicia sesion con tu cuenta institucional de Microsoft o con tu usuario y contraseña de
+            CampusLab para acceder a la plataforma.
           </p>
           <button className="btn" onClick={loginMicrosoft} disabled={inProgress !== InteractionStatus.None}>
             {inProgress !== InteractionStatus.None ? 'Iniciando...' : 'Iniciar sesion con Microsoft'}
+          </button>
+          <button className="btn btn-ghost" onClick={() => void loginWithCognito(true)}>
+            Entrar con usuario y contraseña
           </button>
         </div>
       </main>
@@ -129,9 +134,13 @@ export default function App() {
         </div>
         <div className="user-box">
           <div className="user-meta">
-            <strong>{identidad?.username || cuenta?.name}</strong>
+            <strong>{cuenta?.name || identidad?.username}</strong>
             <span className={`role-tag ${identidad?.isAdmin ? 'is-admin' : ''}`}>
-              {identidad?.isAdmin ? 'Admin' : (identidad?.roles?.[0]?.replace('ROLE_', '') || 'Usuario')}
+              {identidad?.isAdmin
+                ? 'Admin'
+                : identidad?.roles?.includes('ROLE_OPERADOR')
+                  ? 'Operador'
+                  : 'Usuario'}
             </span>
           </div>
           <button className="btn btn-ghost" onClick={cerrarCognito}>Cerrar sesion</button>
@@ -145,13 +154,18 @@ export default function App() {
         <button className={tab === 'reservas' ? 'active' : ''} onClick={() => setTab('reservas')}>
           Reservas
         </button>
+        {identidad?.isAdmin && (
+          <button className={tab === 'mensajeria' ? 'active' : ''} onClick={() => setTab('mensajeria')}>
+            Mensajeria (demo DLQ)
+          </button>
+        )}
       </nav>
 
       {error && <p className="error">{error}</p>}
 
-      {tab === 'productos'
-        ? <ProductosPanel isAdmin={identidad?.isAdmin ?? false} />
-        : <ReservasPanel isAdmin={identidad?.isAdmin ?? false} />}
+      {tab === 'productos' && <ProductosPanel isAdmin={identidad?.isAdmin ?? false} />}
+      {tab === 'reservas' && <ReservasPanel isAdmin={identidad?.isAdmin ?? false} />}
+      {tab === 'mensajeria' && identidad?.isAdmin && <MensajeriaPanel />}
     </main>
   );
 }
