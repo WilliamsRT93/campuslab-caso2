@@ -5,10 +5,10 @@ spring:
   application:
     name: ms-campuslab-catalog
   datasource:
-    url: jdbc:h2:mem:catalog;DB_CLOSE_DELAY=-1
-    driver-class-name: org.h2.Driver
-    username: sa
-    password: ""
+    url: ${DB_URL:jdbc:h2:mem:catalog;DB_CLOSE_DELAY=-1}
+    driver-class-name: ${DB_DRIVER:org.h2.Driver}
+    username: ${DB_USER:sa}
+    password: ${DB_PASSWORD:}
   jpa:
     hibernate:
       ddl-auto: update
@@ -16,6 +16,28 @@ spring:
   h2:
     console:
       enabled: true
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:admin}
+    password: ${RABBITMQ_PASS:admin123}
+    virtual-host: /
+    listener:
+      simple:
+        acknowledge-mode: manual
+        prefetch: 1
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 1000
+
+# Mismos nombres que declara ms-campuslab-rabbitmq-admin (duena de la topologia).
+# Este microservicio solo los referencia para publicar/consumir.
+campuslab:
+  rabbitmq:
+    exchange: campuslab.exchange
+    queue-auditoria: cola-auditoria
+    routing-key-auditoria: reserva.auditoria
 
 management:
   endpoints:

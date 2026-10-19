@@ -5,10 +5,10 @@ spring:
   application:
     name: ms-campuslab-bookings
   datasource:
-    url: jdbc:h2:mem:bookings;DB_CLOSE_DELAY=-1
-    driver-class-name: org.h2.Driver
-    username: sa
-    password: ""
+    url: ${DB_URL:jdbc:h2:mem:bookings;DB_CLOSE_DELAY=-1}
+    driver-class-name: ${DB_DRIVER:org.h2.Driver}
+    username: ${DB_USER:sa}
+    password: ${DB_PASSWORD:}
   jpa:
     hibernate:
       ddl-auto: update
@@ -16,6 +16,31 @@ spring:
   h2:
     console:
       enabled: true
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:admin}
+    password: ${RABBITMQ_PASS:admin123}
+    virtual-host: /
+    listener:
+      simple:
+        acknowledge-mode: manual
+        prefetch: 1
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 1000
+
+# Nombres de exchange/colas/routing-keys CENTRALIZADOS (misma topologia que declara
+# ms-campuslab-rabbitmq-admin -- este microservicio NO vuelve a declarar colas/exchanges,
+# solo publica y consume usando estos nombres).
+campuslab:
+  rabbitmq:
+    exchange: campuslab.exchange
+    queue-notificaciones: cola-notificaciones
+    queue-documentos: cola-documentos
+    routing-key-notificaciones: reserva.notificacion
+    routing-key-documentos: reserva.documento
 
 management:
   endpoints:

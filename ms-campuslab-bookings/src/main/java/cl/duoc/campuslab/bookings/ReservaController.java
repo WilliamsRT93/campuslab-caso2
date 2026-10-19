@@ -1,5 +1,6 @@
 package cl.duoc.campuslab.bookings;
 
+import cl.duoc.campuslab.bookings.messaging.ReservaEventPublisher;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
@@ -23,9 +24,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class ReservaController {
 
     private final ReservaRepository repository;
+    private final ReservaEventPublisher eventPublisher;
 
-    public ReservaController(ReservaRepository repository) {
+    public ReservaController(ReservaRepository repository, ReservaEventPublisher eventPublisher) {
         this.repository = repository;
+        this.eventPublisher = eventPublisher;
     }
 
     /** GET: lista reservas, opcionalmente filtradas por estado. */
@@ -48,6 +51,7 @@ public class ReservaController {
         Reserva creada = repository.save(new Reserva(
                 request.getNombre(), request.getRut(), request.getFecha(),
                 request.getProductoId(), EstadoReserva.SOLICITADA));
+        eventPublisher.publicarReservaCreada(creada);
         return ResponseEntity.created(URI.create("/api/bookings/" + creada.getId())).body(creada);
     }
 

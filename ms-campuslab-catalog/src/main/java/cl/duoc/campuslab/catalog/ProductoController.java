@@ -1,5 +1,6 @@
 package cl.duoc.campuslab.catalog;
 
+import cl.duoc.campuslab.catalog.messaging.AuditoriaEventPublisher;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
@@ -22,9 +23,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class ProductoController {
 
     private final ProductoRepository repository;
+    private final AuditoriaEventPublisher auditoriaPublisher;
 
-    public ProductoController(ProductoRepository repository) {
+    public ProductoController(ProductoRepository repository, AuditoriaEventPublisher auditoriaPublisher) {
         this.repository = repository;
+        this.auditoriaPublisher = auditoriaPublisher;
     }
 
     /** GET: lista todos los recursos del catalogo. */
@@ -46,6 +49,7 @@ public class ProductoController {
     public ResponseEntity<Producto> crear(@Valid @RequestBody ProductoRequest request) {
         Producto creado = repository.save(new Producto(
                 request.getNombre(), request.getTipo(), request.getStock(), request.getDisponible()));
+        auditoriaPublisher.publicarEvento("CREACION", creado);
         return ResponseEntity.created(URI.create("/api/catalog/resources/" + creado.getId())).body(creado);
     }
 
@@ -59,7 +63,9 @@ public class ProductoController {
                     producto.setTipo(request.getTipo());
                     producto.setStock(request.getStock());
                     producto.setDisponible(request.getDisponible());
-                    return ResponseEntity.ok(repository.save(producto));
+                    Producto actualizado = repository.save(producto);
+                    auditoriaPublisher.publicarEvento("ACTUALIZACION", actualizado);
+                    return ResponseEntity.ok(actualizado);
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -71,6 +77,7 @@ public class ProductoController {
             return ResponseEntity.notFound().build();
         }
         repository.deleteById(id);
+        auditoriaPublisher.publicarEliminacion("ELIMINACION", id);
         return ResponseEntity.noContent().build();
     }
 }
