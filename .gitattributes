@@ -1,0 +1,2 @@
+# Los scripts de consola deben conservar fin de linea LF aunque se clonen en Windows (Git Bash)
+*.sh text eol=lf
