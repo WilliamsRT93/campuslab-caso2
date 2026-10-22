@@ -18,6 +18,9 @@ import './App.css';
 
 type Tab = 'productos' | 'reservas' | 'mensajeria';
 
+// React (modo desarrollo) ejecuta los efectos dos veces; un codigo de Cognito solo se puede canjear una vez.
+let codigoCanjeado: string | null = null;
+
 export default function App() {
   const { instance, accounts, inProgress } = useMsal();
   const isAuthenticated = useIsAuthenticated();
@@ -41,6 +44,8 @@ export default function App() {
       return;
     }
     if (code) {
+      if (codigoCanjeado === code) return;
+      codigoCanjeado = code;
       exchangeCodeForToken(code)
         .then((token) => {
           setCognitoToken(token);
