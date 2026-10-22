@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CampusLab · Administrador de RabbitMQ (Swagger)</title>
+<link rel="stylesheet" href="/swagger-ui/swagger-ui.css">
+<style>
+  body { margin: 0; font-family: system-ui, Arial, sans-serif; background: #fafafa; }
+  .barra { background: #14213d; color: #fff; padding: 14px 24px; display: flex; flex-wrap: wrap; gap: 18px; align-items: center; }
+  .barra h1 { font-size: 17px; margin: 0; font-weight: 600; }
+  .barra small { color: #b8c4e0; }
+  .acceso { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-left: auto; }
+  .acceso input { padding: 7px 10px; border-radius: 6px; border: 1px solid #5b6b94; background: #1f2f55; color: #fff; width: 150px; }
+  button { cursor: pointer; border: 0; border-radius: 6px; padding: 8px 14px; font-weight: 600; background: #fca311; color: #14213d; }
+  button.sec { background: #2e4272; color: #fff; }
+  button:disabled { opacity: .5; cursor: default; }
+  #estado { font-size: 13px; padding: 6px 12px; border-radius: 20px; background: #3a3a3a; }
+  #estado.ok { background: #1b7f3b; }
+  #estado.mal { background: #a4262c; }
+  .rapidas { display: none; background: #fff; border-bottom: 1px solid #ddd; padding: 12px 24px; }
+  .rapidas h2 { font-size: 14px; margin: 0 0 8px; color: #14213d; }
+  .rapidas .botones { display: flex; flex-wrap: wrap; gap: 8px; }
+  .rapidas button.dlq { background: #fde2e4; color: #7a1020; }
+  #resultado { margin: 10px 0 0; padding: 10px 12px; background: #0d1117; color: #d4d4d4; border-radius: 6px; font-size: 12px; max-height: 190px; overflow: auto; white-space: pre-wrap; display: none; }
+</style>
+</head>
+<body>
+<div class="barra">
+  <div>
+    <h1>🐰 CampusLab · Administrador de RabbitMQ</h1>
+    <small>API protegida con JWT de Cognito (rol Admin)</small>
+  </div>
+  <div class="acceso">
+    <input id="usuario" value="admin" autocomplete="username" aria-label="Usuario">
+    <input id="clave" type="password" value="Admin123!" autocomplete="current-password" aria-label="Contraseña">
+    <button id="btnToken">🔑 Obtener token</button>
+    <button id="btnCopiar" class="sec" disabled>Copiar token</button>
+    <button id="btnSalir" class="sec" disabled>Salir</button>
+    <span id="estado">Sin token</span>
+  </div>
+</div>
+
+<div class="rapidas" id="rapidas">
+  <h2>Consultas rápidas (un clic, ya con el token) — estado de cada cola</h2>
+  <div class="botones" id="botonesRapidos"></div>
+  <pre id="resultado"></pre>
+</div>
+
+<div id="swagger-ui"></div>
+
+<script src="/swagger-ui/swagger-ui-bundle.js"></script>
+<script>
+const REGION = 'us-east-1';
+const CLIENT_ID = '6r3af8ucc96okla0ujph9pru4a';
+const COLAS = ['cola-notificaciones', 'cola-documentos', 'cola-auditoria',
+               'cola-notificaciones-dlq', 'cola-documentos-dlq', 'cola-auditoria-dlq'];
+let token = sessionStorage.getItem('campuslab_swagger_token') || null;
+
+const $ = (id) => document.getElementById(id);
+
+function decodificar(jwt) {
+  try { return JSON.parse(atob(jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))); }
+  catch (e) { return {}; }
+}
+
+function pintarEstado(texto, clase) {
+  $('estado').textContent = texto;
+  $('estado').className = clase || '';
+}
+
+function refrescarUI() {
+  const hayToken = !!token;
+  $('btnCopiar').disabled = !hayToken;
+  $('btnSalir').disabled = !hayToken;
+  $('rapidas').style.display = hayToken ? 'block' : 'none';
+  if (hayToken) {
+    const c = decodificar(token);
+    const minutos = Math.max(0, Math.round((c.exp * 1000 - Date.now()) / 60000));
+    const grupos = (c['cognito:groups'] || []).join(', ') || 'sin grupo';
+    pintarEstado('✅ Token capturado · ' + (c.username || '?') + ' · ' + grupos + ' · expira en ' + minutos + ' min', 'ok');
+  } else {
+    pintarEstado('Sin token');
+  }
+}
+
+async function obtenerToken() {
+  pintarEstado('Autenticando con Cognito...');
+  try {
+    const resp = await fetch('https://cognito-idp.' + REGION + '.amazonaws.com/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-amz-json-1.1',
+        'X-Amz-Target': 'AWSCognitoIdentityProviderService.InitiateAuth'
+      },
+      body: JSON.stringify({
+        AuthFlow: 'USER_PASSWORD_AUTH',
+        ClientId: CLIENT_ID,
+        AuthParameters: { USERNAME: $('usuario').value, PASSWORD: $('clave').value }
+      })
+    });
+    const datos = await resp.json();
+    if (!resp.ok || !datos.AuthenticationResult) {
+      throw new Error(datos.message || 'No se pudo autenticar');
+    }
+    token = datos.AuthenticationResult.AccessToken;
+    sessionStorage.setItem('campuslab_swagger_token', token);
+    refrescarUI();
+  } catch (e) {
+    token = null;
+    sessionStorage.removeItem('campuslab_swagger_token');
+    refrescarUI();
+    pintarEstado('❌ ' + e.message, 'mal');
+  }
+}
+
+async function consultarCola(nombre) {
+  const caja = $('resultado');
+  caja.style.display = 'block';
+  caja.textContent = 'GET /api/rabbitmq/queues/' + nombre + ' ...';
+  const resp = await fetch('/api/rabbitmq/queues/' + nombre, { headers: { Authorization: 'Bearer ' + token } });
+  const texto = await resp.text();
+  let cuerpo = texto;
+  try { cuerpo = JSON.stringify(JSON.parse(texto), null, 2); } catch (e) { /* texto plano */ }
+  caja.textContent = 'GET /api/rabbitmq/queues/' + nombre + '  ->  HTTP ' + resp.status + '\n' + cuerpo;
+}
+
+COLAS.forEach((nombre) => {
+  const b = document.createElement('button');
+  b.textContent = (nombre.endsWith('-dlq') ? '💀 ' : '📥 ') + nombre;
+  if (nombre.endsWith('-dlq')) b.className = 'dlq';
+  b.onclick = () => consultarCola(nombre);
+  $('botonesRapidos').appendChild(b);
+});
+
+$('btnToken').onclick = obtenerToken;
+$('btnSalir').onclick = () => { token = null; sessionStorage.removeItem('campuslab_swagger_token'); $('resultado').style.display = 'none'; refrescarUI(); };
+$('btnCopiar').onclick = () => navigator.clipboard.writeText(token).then(() => pintarEstado('✅ Token copiado al portapapeles', 'ok'));
+
+window.ui = SwaggerUIBundle({
+  url: '/v3/api-docs',
+  dom_id: '#swagger-ui',
+  deepLinking: true,
+  docExpansion: 'list',
+  // Todas las consultas "Try it out" salen con el token capturado.
+  requestInterceptor: (req) => {
+    if (token) req.headers['Authorization'] = 'Bearer ' + token;
+    return req;
+  }
+});
+refrescarUI();
+</script>
+</body>
+</html>

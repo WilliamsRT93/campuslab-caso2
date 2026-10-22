@@ -34,6 +34,13 @@ campuslab:
       notificaciones: reserva.notificacion
       documentos: reserva.documento
       auditoria: reserva.auditoria
+  # Seguridad de la API: valida el JWT de Cognito y exige rol Admin (grupo "Admin").
+  # SECURITY_ENABLED=false la desactiva (solo para desarrollo local sin acceso a Cognito).
+  security:
+    enabled: ${SECURITY_ENABLED:true}
+    jwk-set-uri: ${COGNITO_JWK_SET_URI:https://cognito-idp.us-east-1.amazonaws.com/us-east-1_dBOQeniQq/.well-known/jwks.json}
+    issuer: ${COGNITO_ISSUER_URI:https://cognito-idp.us-east-1.amazonaws.com/us-east-1_dBOQeniQq}
+    client-id: ${COGNITO_CLIENT_ID:6r3af8ucc96okla0ujph9pru4a}
 
 management:
   endpoints:
@@ -43,6 +50,7 @@ management:
 
 springdoc:
   swagger-ui:
-    path: /swagger-ui.html
+    # La pagina /swagger-ui.html la sirve SwaggerPaginaController (static/swagger.html): trae el login con boton.
+    path: /swagger-base.html
   api-docs:
     path: /v3/api-docs
