@@ -1,0 +1,58 @@
+# Cluster RabbitMQ de 2 nodos (EP3). Se despliega en una EC2 exclusiva para RabbitMQ.
+#   cd infra/rabbitmq-cluster && docker compose up -d
+# Credenciales y cookie configurables por variables de entorno; los valores por
+# defecto son los del ejemplo de cluster del curso (Unidad 2).
+#   Panel de administracion: http://<IP>:15672   |   AMQP: <IP>:5672
+
+services:
+  rabbitmq-1:
+    image: rabbitmq:3.12-management-alpine
+    container_name: rabbitmq-1
+    restart: unless-stopped
+    hostname: rabbitmq-1
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-admin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-admin123}
+      RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_ERLANG_COOKIE:-campuslab_secret_cookie}
+    volumes:
+      - rabbitmq_data_1:/var/lib/rabbitmq
+      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    networks:
+      - rabbitmq_cluster
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  rabbitmq-2:
+    image: rabbitmq:3.12-management-alpine
+    container_name: rabbitmq-2
+    restart: unless-stopped
+    hostname: rabbitmq-2
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-admin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-admin123}
+      RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_ERLANG_COOKIE:-campuslab_secret_cookie}
+    volumes:
+      - rabbitmq_data_2:/var/lib/rabbitmq
+      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    networks:
+      - rabbitmq_cluster
+    depends_on:
+      rabbitmq-1:
+        condition: service_healthy
+
+volumes:
+  rabbitmq_data_1:
+  rabbitmq_data_2:
+
+networks:
+  rabbitmq_cluster:
+    driver: bridge

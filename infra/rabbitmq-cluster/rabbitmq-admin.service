@@ -1,0 +1,17 @@
+# Servicio systemd del microservicio administrador de RabbitMQ (puerto 8083).
+#   sudo cp rabbitmq-admin.service /etc/systemd/system/ && sudo systemctl enable --now rabbitmq-admin
+[Unit]
+Description=CampusLab RabbitMQ Admin Microservice
+After=docker.service
+
+[Service]
+Environment=RABBITMQ_HOST=localhost
+Environment=RABBITMQ_PORT=5672
+Environment=RABBITMQ_USER=admin
+Environment=RABBITMQ_PASS=admin123
+ExecStart=/usr/bin/java -jar /home/ec2-user/rabbitmq-admin.jar
+Restart=on-failure
+User=ec2-user
+
+[Install]
+WantedBy=multi-user.target

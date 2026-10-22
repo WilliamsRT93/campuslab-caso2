@@ -1,24 +1,20 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  API Gateway (HTTP API) de CampusLab, definido como infraestructura como
-  codigo (EP3 - requisito "no usar proxy manual, usar CloudFormation para
-  las rutas"). Reemplaza los comandos sueltos de `aws apigatewayv2` que se
-  venian corriendo a mano cada vez que cambiaba la IP del backend.
-  Actualizar solo el parametro BackendUrl (y FrontendOrigin si corresponde)
-  y volver a desplegar el stack reemplaza todo lo que antes requeria 2
-  comandos manuales distintos.
+  API Gateway (HTTP API) de CampusLab definido como infraestructura como codigo
+  (EP3: rutas gestionadas con CloudFormation, sin proxy generico). Cada recurso y
+  verbo tiene su ruta explicita, protegida con el autorizador JWT de Cognito, y su
+  integracion hacia el BFF. Para cambiar de backend solo se actualiza el
+  parametro BackendBaseUrl y se vuelve a desplegar el stack.
 
 Parameters:
-  BackendUrl:
+  BackendBaseUrl:
     Type: String
-    Description: >
-      URL del backend BFF (http://<IP-actual-EC2>:8080/{proxy}). Se mantiene fija con IP elastica; actualizar solo si se reasigna
-      la IP elastica de la EC2.
-    Default: http://100.60.125.97:8080/{proxy}
+    Description: URL base del BFF, sin ruta ni proxy (http://<IP-elastica-EC2>:8080).
+    Default: http://100.60.125.97:8080
 
   FrontendOriginNube:
     Type: String
-    Description: Origen HTTPS del frontend desplegado en la EC2 (IP actual).
+    Description: Origen HTTPS del frontend desplegado en la EC2.
     Default: https://100.60.125.97
 
   FrontendOriginLocal:
@@ -61,50 +57,169 @@ Resources:
           - !Ref CognitoClientId
         Issuer: !Ref CognitoIssuer
 
-  BackendIntegration:
+  # ---------------- Integraciones (una por recurso, sin proxy) ----------------
+  IntMe:
     Type: AWS::ApiGatewayV2::Integration
     Properties:
       ApiId: !Ref CampusLabHttpApi
       IntegrationType: HTTP_PROXY
       IntegrationMethod: ANY
-      IntegrationUri: !Ref BackendUrl
+      IntegrationUri: !Sub '${BackendBaseUrl}/api/me'
       PayloadFormatVersion: '1.0'
 
-  RouteGet:
-    Type: AWS::ApiGatewayV2::Route
+  IntCatalog:
+    Type: AWS::ApiGatewayV2::Integration
     Properties:
       ApiId: !Ref CampusLabHttpApi
-      RouteKey: GET /{proxy+}
-      AuthorizationType: JWT
-      AuthorizerId: !Ref CognitoJwtAuthorizer
-      Target: !Join ['/', ['integrations', !Ref BackendIntegration]]
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      IntegrationUri: !Sub '${BackendBaseUrl}/api/catalog/resources'
+      PayloadFormatVersion: '1.0'
 
-  RoutePost:
-    Type: AWS::ApiGatewayV2::Route
+  IntCatalogItem:
+    Type: AWS::ApiGatewayV2::Integration
     Properties:
       ApiId: !Ref CampusLabHttpApi
-      RouteKey: POST /{proxy+}
-      AuthorizationType: JWT
-      AuthorizerId: !Ref CognitoJwtAuthorizer
-      Target: !Join ['/', ['integrations', !Ref BackendIntegration]]
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      IntegrationUri: !Sub '${BackendBaseUrl}/api/catalog/resources/{id}'
+      PayloadFormatVersion: '1.0'
 
-  RoutePut:
-    Type: AWS::ApiGatewayV2::Route
+  IntBookings:
+    Type: AWS::ApiGatewayV2::Integration
     Properties:
       ApiId: !Ref CampusLabHttpApi
-      RouteKey: PUT /{proxy+}
-      AuthorizationType: JWT
-      AuthorizerId: !Ref CognitoJwtAuthorizer
-      Target: !Join ['/', ['integrations', !Ref BackendIntegration]]
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      IntegrationUri: !Sub '${BackendBaseUrl}/api/bookings'
+      PayloadFormatVersion: '1.0'
 
-  RouteDelete:
+  IntBookingsItem:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      IntegrationUri: !Sub '${BackendBaseUrl}/api/bookings/{id}'
+      PayloadFormatVersion: '1.0'
+
+  IntBookingsStatus:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      IntegrationUri: !Sub '${BackendBaseUrl}/api/bookings/{id}/status'
+      PayloadFormatVersion: '1.0'
+
+  # ---------------- Rutas explicitas ----------------
+  RouteMeGet:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref CampusLabHttpApi
-      RouteKey: DELETE /{proxy+}
+      RouteKey: GET /api/me
       AuthorizationType: JWT
       AuthorizerId: !Ref CognitoJwtAuthorizer
-      Target: !Join ['/', ['integrations', !Ref BackendIntegration]]
+      Target: !Join ['/', ['integrations', !Ref IntMe]]
+
+  RouteCatalogGet:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      RouteKey: GET /api/catalog/resources
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoJwtAuthorizer
+      Target: !Join ['/', ['integrations', !Ref IntCatalog]]
+
+  RouteCatalogPost:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      RouteKey: POST /api/catalog/resources
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoJwtAuthorizer
+      Target: !Join ['/', ['integrations', !Ref IntCatalog]]
+
+  RouteCatalogItemGet:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      RouteKey: GET /api/catalog/resources/{id}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoJwtAuthorizer
+      Target: !Join ['/', ['integrations', !Ref IntCatalogItem]]
+
+  RouteCatalogItemPut:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      RouteKey: PUT /api/catalog/resources/{id}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoJwtAuthorizer
+      Target: !Join ['/', ['integrations', !Ref IntCatalogItem]]
+
+  RouteCatalogItemDelete:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      RouteKey: DELETE /api/catalog/resources/{id}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoJwtAuthorizer
+      Target: !Join ['/', ['integrations', !Ref IntCatalogItem]]
+
+  RouteBookingsGet:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      RouteKey: GET /api/bookings
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoJwtAuthorizer
+      Target: !Join ['/', ['integrations', !Ref IntBookings]]
+
+  RouteBookingsPost:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      RouteKey: POST /api/bookings
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoJwtAuthorizer
+      Target: !Join ['/', ['integrations', !Ref IntBookings]]
+
+  RouteBookingsItemGet:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      RouteKey: GET /api/bookings/{id}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoJwtAuthorizer
+      Target: !Join ['/', ['integrations', !Ref IntBookingsItem]]
+
+  RouteBookingsItemPut:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      RouteKey: PUT /api/bookings/{id}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoJwtAuthorizer
+      Target: !Join ['/', ['integrations', !Ref IntBookingsItem]]
+
+  RouteBookingsItemDelete:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      RouteKey: DELETE /api/bookings/{id}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoJwtAuthorizer
+      Target: !Join ['/', ['integrations', !Ref IntBookingsItem]]
+
+  RouteBookingsStatusPut:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      RouteKey: PUT /api/bookings/{id}/status
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoJwtAuthorizer
+      Target: !Join ['/', ['integrations', !Ref IntBookingsStatus]]
 
   DefaultStage:
     Type: AWS::ApiGatewayV2::Stage
