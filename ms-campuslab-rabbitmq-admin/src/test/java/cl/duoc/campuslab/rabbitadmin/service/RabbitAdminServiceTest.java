@@ -39,7 +39,8 @@ class RabbitAdminServiceTest {
         template = mock(RabbitTemplate.class);
         when(admin.getRabbitTemplate()).thenReturn(template);
         RabbitMQProperties props = new RabbitMQProperties("campuslab.exchange", "campuslab.dlx",
-                Map.of("a", "cola-a"), "-dlq", Map.of("a", "reserva.a"), 60000L);
+                Map.of("a", "cola-a"), "-dlq", Map.of("a", "reserva.a"), 60000L,
+            new RabbitMQProperties.Topic("campuslab.eventos", Map.of("r", "cola-ev"), Map.of("r", "reserva.#")));
         servicio = new RabbitAdminService(admin, props);
     }
 

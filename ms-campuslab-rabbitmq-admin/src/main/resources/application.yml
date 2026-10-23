@@ -22,6 +22,32 @@ spring:
 campuslab:
   # API de gestion de RabbitMQ (la lee TopologiaService para mostrar exchanges, colas y bindings reales)
   management-url: ${RABBITMQ_MANAGEMENT_URL:http://localhost:15672}
+  # Validadores (Swagger): el API Gateway se llama desde fuera para comprobar que no hay rutas proxy.
+  validacion:
+    api-gateway-url: ${API_GATEWAY_URL:https://obxz43kip7.execute-api.us-east-1.amazonaws.com}
+    timeout-segundos: 12
+    rutas:           # las 14 declaradas en CloudFormation; con token deben responder "esperado" (400 = llega al backend y falla la validacion)
+      - { metodo: GET,    ruta: /api/me, esperado: 200 }
+      - { metodo: GET,    ruta: /api/catalog/resources, esperado: 200 }
+      - { metodo: POST,   ruta: /api/catalog/resources, cuerpo: "{}", esperado: 400 }
+      - { metodo: GET,    ruta: /api/catalog/resources/abc, esperado: 400 }
+      - { metodo: PUT,    ruta: /api/catalog/resources/abc, cuerpo: "{}", esperado: 400 }
+      - { metodo: DELETE, ruta: /api/catalog/resources/abc, esperado: 400 }
+      - { metodo: GET,    ruta: /api/bookings, esperado: 200 }
+      - { metodo: POST,   ruta: /api/bookings, cuerpo: "{}", esperado: 400 }
+      - { metodo: GET,    ruta: /api/bookings/abc, esperado: 400 }
+      - { metodo: PUT,    ruta: /api/bookings/abc, cuerpo: "{}", esperado: 400 }
+      - { metodo: DELETE, ruta: /api/bookings/abc, esperado: 400 }
+      - { metodo: PUT,    ruta: /api/bookings/abc/status, cuerpo: "{}", esperado: 400 }
+      - { metodo: GET,    ruta: /api/rabbitmq/topologia, esperado: 200 }
+      - { metodo: POST,   ruta: /api/rabbitmq/publicar, cuerpo: "{}", esperado: 400 }
+    controles:       # rutas NO declaradas: el gateway debe responder 404 (no hay {proxy+} ni ANY)
+      - { metodo: GET,    ruta: /api/no-existe }
+      - { metodo: GET,    ruta: /api/catalog }
+      - { metodo: DELETE, ruta: /api/catalog/resources }
+      - { metodo: PATCH,  ruta: /api/bookings/1 }
+      - { metodo: GET,    ruta: /api/catalog/resources/1/extra }
+      - { metodo: GET,    ruta: /cualquier/cosa }
   rabbitmq:
     exchange: campuslab.exchange
     dlx: campuslab.dlx
@@ -32,6 +58,15 @@ campuslab:
     dlq-suffix: "-dlq"
     # TTL de los mensajes en las colas de negocio (ms). Al vencer, van a la DLQ con reason=expired.
     message-ttl-ms: ${MESSAGE_TTL_MS:60000}
+    # Exchange TOPIC: enruta por patron. "#" = cero o mas palabras, "*" = exactamente una palabra.
+    topic:
+      exchange: campuslab.eventos
+      queues:
+        reservas: cola-eventos-reservas
+        catalogo: cola-eventos-catalogo
+      patterns:
+        reservas: "reserva.#"
+        catalogo: "catalogo.#"
     routing-keys:
       notificaciones: reserva.notificacion
       documentos: reserva.documento

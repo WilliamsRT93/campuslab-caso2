@@ -45,7 +45,8 @@ export function ProbarColasPanel() {
     return () => clearInterval(id);
   }, [cargar]);
 
-  const exchangePrincipal = topologia?.exchanges.find((e) => !e.nombre.endsWith('.dlx'))?.nombre ?? '';
+  const exchangePrincipal = topologia?.exchanges.find((e) => e.tipo === 'direct' && !e.nombre.endsWith('.dlx'))?.nombre ?? '';
+  const exchangeTopic = topologia?.exchanges.find((e) => e.tipo === 'topic')?.nombre ?? '';
   const exchangeActual = exchange || exchangePrincipal;
   const clavesDelExchange = (topologia?.bindings ?? []).filter((b) => b.exchange === exchangeActual);
   const claveActual = routingKey && (routingKey === OTRA || clavesDelExchange.some((b) => b.routingKey === routingKey))
@@ -76,6 +77,12 @@ export function ProbarColasPanel() {
     for (const b of (topologia?.bindings ?? []).filter((x) => x.exchange === exchangePrincipal)) {
       await enviar(exchangePrincipal, b.routingKey);
     }
+    setEnviando(false);
+  };
+
+  const enviarATopic = async (clave: string) => {
+    setEnviando(true);
+    await enviar(exchangeTopic, clave);
     setEnviando(false);
   };
 
@@ -187,6 +194,22 @@ export function ProbarColasPanel() {
           Probar routing key sin binding
         </button>
       </div>
+      {exchangeTopic && (
+        <>
+          <h4 className="sub-h">Exchange topic <code>{exchangeTopic}</code>: el enrutamiento es por patron (<code>#</code> = cero o mas palabras)</h4>
+          <div className="form-actions">
+            <button className="btn btn-ghost" disabled={enviando} onClick={() => void enviarATopic('reserva.creada')}>
+              reserva.creada → cola-eventos-reservas
+            </button>
+            <button className="btn btn-ghost" disabled={enviando} onClick={() => void enviarATopic('catalogo.producto.creacion')}>
+              catalogo.producto.creacion → cola-eventos-catalogo
+            </button>
+            <button className="btn btn-ghost" disabled={enviando} onClick={() => void enviarATopic('otro.dominio')}>
+              otro.dominio → sin coincidencia
+            </button>
+          </div>
+        </>
+      )}
 
       {historial.map((h, i) => (
         <div key={i} className={`res ${h.error ? 'bad' : h.resultado?.ruteado ? 'ok' : 'warn'}`}>

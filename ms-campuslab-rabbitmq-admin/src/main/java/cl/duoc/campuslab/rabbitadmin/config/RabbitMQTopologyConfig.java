@@ -9,6 +9,7 @@ import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.QueueBuilder;
+import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -131,6 +132,70 @@ public class RabbitMQTopologyConfig {
     public Binding auditoriaDlqBinding() {
         return BindingBuilder.bind(auditoriaDlq()).to(deadLetterExchange())
                 .with(props.routingKeys().get("auditoria"));
+    }
+
+    // --- Exchange TOPIC: eventos enrutados por patron (reserva.# y catalogo.#) ---
+
+    @Bean
+    public TopicExchange eventosExchange() {
+        return new TopicExchange(props.topic().exchange(), true, false);
+    }
+
+    @Bean
+    public Queue eventosReservasQueue() {
+        return buildTopicQueueWithDlq("reservas");
+    }
+
+    @Bean
+    public Queue eventosReservasDlq() {
+        return QueueBuilder.durable(props.topic().queues().get("reservas") + props.dlqSuffix()).build();
+    }
+
+    @Bean
+    public Binding eventosReservasBinding() {
+        return BindingBuilder.bind(eventosReservasQueue()).to(eventosExchange())
+                .with(props.topic().patterns().get("reservas"));
+    }
+
+    @Bean
+    public Binding eventosReservasDlqBinding() {
+        return BindingBuilder.bind(eventosReservasDlq()).to(deadLetterExchange())
+                .with(props.topic().queues().get("reservas"));
+    }
+
+    @Bean
+    public Queue eventosCatalogoQueue() {
+        return buildTopicQueueWithDlq("catalogo");
+    }
+
+    @Bean
+    public Queue eventosCatalogoDlq() {
+        return QueueBuilder.durable(props.topic().queues().get("catalogo") + props.dlqSuffix()).build();
+    }
+
+    @Bean
+    public Binding eventosCatalogoBinding() {
+        return BindingBuilder.bind(eventosCatalogoQueue()).to(eventosExchange())
+                .with(props.topic().patterns().get("catalogo"));
+    }
+
+    @Bean
+    public Binding eventosCatalogoDlqBinding() {
+        return BindingBuilder.bind(eventosCatalogoDlq()).to(deadLetterExchange())
+                .with(props.topic().queues().get("catalogo"));
+    }
+
+    /**
+     * Cola del exchange topic con dead-lettering. El patron del binding (reserva.#) no sirve como routing key del
+     * DLX (que es direct), por eso los mensajes muertos viajan con el NOMBRE de la cola como routing key.
+     */
+    private Queue buildTopicQueueWithDlq(String logicalKey) {
+        String nombre = props.topic().queues().get(logicalKey);
+        Map<String, Object> args = new HashMap<>();
+        args.put("x-dead-letter-exchange", props.dlx());
+        args.put("x-dead-letter-routing-key", nombre);
+        args.put("x-message-ttl", props.messageTtlMs());
+        return QueueBuilder.durable(nombre).withArguments(args).build();
     }
 
     /**

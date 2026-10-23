@@ -10,5 +10,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record RabbitMessagingProperties(
         String exchange,
         String queueAuditoria,
-        String routingKeyAuditoria) {
+        String routingKeyAuditoria,
+        String topicExchange,
+        String queueEventosCatalogo,
+        String routingKeyEventoCatalogo) {
 }

@@ -32,6 +32,7 @@ public class AuditoriaEventPublisher {
                 new CorrelationData("auditoria-" + accion + "-" + producto.getId()));
         log.info("✅ Evento publicado -> {} (routingKey={}) accion={} producto #{}",
                 props.queueAuditoria(), props.routingKeyAuditoria(), accion, producto.getId());
+        publicarEnTopic(accion, payload, producto.getId());
     }
 
     public void publicarEliminacion(String accion, Long productoId) {
@@ -40,6 +41,15 @@ public class AuditoriaEventPublisher {
                 new CorrelationData("auditoria-" + accion + "-" + productoId));
         log.info("✅ Evento publicado -> {} (routingKey={}) accion={} producto #{}",
                 props.queueAuditoria(), props.routingKeyAuditoria(), accion, productoId);
+        publicarEnTopic(accion, payload, productoId);
+    }
+
+    /** Exchange topic: catalogo.producto.<accion> lo recibe quien este enlazado a catalogo.# */
+    private void publicarEnTopic(String accion, String payload, Object id) {
+        String routingKey = props.routingKeyEventoCatalogo() + "." + accion.toLowerCase();
+        rabbitTemplate.convertAndSend(props.topicExchange(), routingKey, payload,
+                new CorrelationData("evento-" + accion + "-" + id));
+        log.info("📡 Evento publicado (topic) -> {} (routingKey={}) producto #{}", props.topicExchange(), routingKey, id);
     }
 
     private String construirPayload(String accion, Producto producto) {

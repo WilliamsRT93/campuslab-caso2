@@ -52,10 +52,14 @@ public class TopologiaService {
     }
 
     public TopologiaResponse obtener() {
-        Set<String> exchangesPropios = Set.of(props.exchange(), props.dlx());
+        Set<String> exchangesPropios = exchangesPermitidos();
         Set<String> colasNegocio = new HashSet<>(props.queues().values());
         Set<String> colasDlq = new HashSet<>();
         props.queues().keySet().forEach(k -> colasDlq.add(props.dlqNameFor(k)));
+        if (props.topic() != null) {
+            colasNegocio.addAll(props.topic().queues().values());
+            props.topic().queues().values().forEach(q -> colasDlq.add(q + props.dlqSuffix()));
+        }
 
         List<ExchangeInfo> exchanges = new ArrayList<>();
         for (JsonNode e : leer("/api/exchanges/%2F")) {
@@ -63,6 +67,8 @@ public class TopologiaService {
             if (exchangesPropios.contains(nombre)) {
                 String funcion = nombre.equals(props.dlx())
                         ? "Colas muertas: recibe lo que una cola rechaza o expira"
+                        : esTopic(nombre)
+                        ? "Topic: enruta por patron (" + String.join(", ", props.topic().patterns().values()) + ")"
                         : "Principal: recibe lo que publican los microservicios";
                 exchanges.add(new ExchangeInfo(nombre, e.path("type").asText(), e.path("durable").asBoolean(), funcion));
             }
@@ -103,16 +109,49 @@ public class TopologiaService {
                 OffsetDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
     }
 
-    /** Colas a las que un binding real enruta (exchange, routingKey). */
+    /** Colas a las que un binding real enruta (exchange, routingKey); en el exchange topic se compara por patron. */
     public List<String> colasDestino(String exchange, String routingKey) {
+        boolean topic = esTopic(exchange);
         return obtener().bindings().stream()
-                .filter(b -> b.exchange().equals(exchange) && b.routingKey().equals(routingKey))
+                .filter(b -> b.exchange().equals(exchange)
+                        && (topic ? coincideTopic(b.routingKey(), routingKey) : b.routingKey().equals(routingKey)))
                 .map(BindingInfo::cola)
                 .toList();
     }
 
     public Set<String> exchangesPermitidos() {
-        return Set.of(props.exchange(), props.dlx());
+        Set<String> exchanges = new HashSet<>(Set.of(props.exchange(), props.dlx()));
+        if (props.topic() != null) {
+            exchanges.add(props.topic().exchange());
+        }
+        return exchanges;
+    }
+
+    public boolean esTopic(String exchange) {
+        return props.topic() != null && props.topic().exchange().equals(exchange);
+    }
+
+    /** Comparacion de patrones del exchange topic: "*" = una palabra, "#" = cero o mas palabras (separadas por punto). */
+    public static boolean coincideTopic(String patron, String clave) {
+        return coincide(patron.split("\\."), 0, clave.split("\\."), 0);
+    }
+
+    private static boolean coincide(String[] p, int i, String[] k, int j) {
+        if (i == p.length) {
+            return j == k.length;
+        }
+        if (p[i].equals("#")) {
+            for (int salto = j; salto <= k.length; salto++) {
+                if (coincide(p, i + 1, k, salto)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        if (j == k.length) {
+            return false;
+        }
+        return (p[i].equals("*") || p[i].equals(k[j])) && coincide(p, i + 1, k, j + 1);
     }
 
     private JsonNode leer(String ruta) {

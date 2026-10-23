@@ -42,6 +42,10 @@ campuslab:
     queue-documentos: cola-documentos
     routing-key-notificaciones: reserva.notificacion
     routing-key-documentos: reserva.documento
+    # Exchange TOPIC (lo declara el administrador): los eventos se enrutan por patron (cola-eventos-reservas = reserva.#)
+    topic-exchange: campuslab.eventos
+    queue-eventos-reservas: cola-eventos-reservas
+    routing-key-evento-reserva: reserva.creada
 
 management:
   endpoints:

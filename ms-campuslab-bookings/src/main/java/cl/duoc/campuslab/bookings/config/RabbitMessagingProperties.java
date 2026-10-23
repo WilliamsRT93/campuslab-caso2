@@ -14,5 +14,8 @@ public record RabbitMessagingProperties(
         String queueNotificaciones,
         String queueDocumentos,
         String routingKeyNotificaciones,
-        String routingKeyDocumentos) {
+        String routingKeyDocumentos,
+        String topicExchange,
+        String queueEventosReservas,
+        String routingKeyEventoReserva) {
 }

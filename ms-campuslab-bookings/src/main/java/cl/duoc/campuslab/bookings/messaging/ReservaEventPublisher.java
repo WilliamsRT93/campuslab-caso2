@@ -41,6 +41,12 @@ public class ReservaEventPublisher {
                 new CorrelationData("reserva-" + reserva.getId() + "-documento"));
         log.info("✅ Evento publicado -> {} (routingKey={}) para reserva #{}",
                 props.queueDocumentos(), props.routingKeyDocumentos(), reserva.getId());
+
+        // Exchange topic: el mismo evento tambien se publica por patron (lo recibe quien este enlazado a reserva.#).
+        rabbitTemplate.convertAndSend(props.topicExchange(), props.routingKeyEventoReserva(), payload,
+                new CorrelationData("reserva-" + reserva.getId() + "-evento"));
+        log.info("📡 Evento publicado (topic) -> {} (routingKey={}) para reserva #{}",
+                props.topicExchange(), props.routingKeyEventoReserva(), reserva.getId());
     }
 
     private String construirPayload(Reserva reserva) {

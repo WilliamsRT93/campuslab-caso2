@@ -39,6 +39,10 @@ campuslab:
     espera-reintento-ms: 1000
     queue-auditoria: cola-auditoria
     routing-key-auditoria: reserva.auditoria
+    # Exchange TOPIC (lo declara el administrador): cola-eventos-catalogo = catalogo.#
+    topic-exchange: campuslab.eventos
+    queue-eventos-catalogo: cola-eventos-catalogo
+    routing-key-evento-catalogo: catalogo.producto
 
 management:
   endpoints:

@@ -44,6 +44,8 @@
 <div class="rapidas" id="rapidas">
   <h2>Consultas rápidas (un clic, ya con el token) — estado de cada cola</h2>
   <div class="botones" id="botonesRapidos"></div>
+  <h2 style="margin-top:14px">Validadores — rutas sin proxy y colas con listener (un clic)</h2>
+  <div class="botones" id="botonesValidacion"></div>
   <pre id="resultado"></pre>
 </div>
 
@@ -131,6 +133,40 @@ COLAS.forEach((nombre) => {
   if (nombre.endsWith('-dlq')) b.className = 'dlq';
   b.onclick = () => consultarCola(nombre);
   $('botonesRapidos').appendChild(b);
+});
+
+const VALIDADORES = [
+  { texto: '🛣️ Validar rutas del API Gateway (sin proxy)', metodo: 'GET', ruta: '/api/rabbitmq/validacion/rutas' },
+  { texto: '📋 Validar colas con listener', metodo: 'GET', ruta: '/api/rabbitmq/validacion/colas' },
+  { texto: '🧪 Probar los listeners (envía 1 mensaje a cada cola)', metodo: 'POST', ruta: '/api/rabbitmq/validacion/colas/prueba' },
+];
+
+async function validar(v) {
+  const caja = $('resultado');
+  caja.style.display = 'block';
+  caja.textContent = v.metodo + ' ' + v.ruta + ' ... (puede tardar unos segundos)';
+  try {
+    const resp = await fetch(v.ruta, { method: v.metodo, headers: { Authorization: 'Bearer ' + token } });
+    const texto = await resp.text();
+    let cuerpo = texto;
+    let resumen = '';
+    try {
+      const json = JSON.parse(texto);
+      cuerpo = JSON.stringify(json, null, 2);
+      if (json.conclusion) resumen = (json.ok ? '✅ ' : '❌ ') + json.conclusion + '\n\n';
+    } catch (e) { /* texto plano */ }
+    caja.textContent = v.metodo + ' ' + v.ruta + '  ->  HTTP ' + resp.status + '\n' + resumen + cuerpo;
+  } catch (e) {
+    caja.textContent = '❌ ' + e.message;
+  }
+}
+
+VALIDADORES.forEach((v) => {
+  const b = document.createElement('button');
+  b.textContent = v.texto;
+  b.className = 'sec';
+  b.onclick = () => validar(v);
+  $('botonesValidacion').appendChild(b);
 });
 
 $('btnToken').onclick = obtenerToken;

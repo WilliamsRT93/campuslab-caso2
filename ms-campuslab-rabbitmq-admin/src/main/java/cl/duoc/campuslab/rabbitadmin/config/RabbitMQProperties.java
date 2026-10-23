@@ -14,7 +14,11 @@ public record RabbitMQProperties(
         Map<String, String> queues,
         String dlqSuffix,
         Map<String, String> routingKeys,
-        long messageTtlMs) {
+        long messageTtlMs,
+        Topic topic) {
+
+    /** Exchange de tipo topic: enruta por patron (reserva.#, catalogo.#). queues y patterns comparten las claves. */
+    public record Topic(String exchange, Map<String, String> queues, Map<String, String> patterns) {}
 
     public String dlqNameFor(String logicalQueueKey) {
         return queues.get(logicalQueueKey) + dlqSuffix;
