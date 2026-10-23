@@ -97,14 +97,14 @@ Las 6 colas son *classic* y viven en el nodo `rabbitmq-1`; el nodo 2 replica sol
 
 ## 8. Rutas del API Gateway con CloudFormation (EP3)
 
-Reemplaza los comandos manuales de la sección 4. La plantilla `infra/cloudformation/api-gateway-rutas.yaml` define las **12 rutas explícitas**
+Reemplaza los comandos manuales de la sección 4. La plantilla `infra/cloudformation/api-gateway-rutas.yaml` define las **14 rutas explícitas** (12 del negocio y 2 de prueba de mensajería hacia el administrador de RabbitMQ, parámetro `RabbitAdminBaseUrl`)
 (sin `{proxy+}`), el autorizador JWT de Cognito, una integración por recurso y el CORS.
 
 ```bash
 aws cloudformation deploy --stack-name campuslab-api-gateway \
   --template-file infra/cloudformation/api-gateway-rutas.yaml \
   --parameter-overrides BackendBaseUrl=http://<IP-ELASTICA-EC2>:8080 FrontendOriginNube=https://<IP-ELASTICA-EC2>
-aws apigatewayv2 get-routes --api-id <ApiId> --query "Items[].RouteKey" --output text   # debe listar las 12 rutas
+aws apigatewayv2 get-routes --api-id <ApiId> --query "Items[].RouteKey" --output text   # debe listar las 14 rutas
 ```
 
 Si cambia la IP del BFF solo se actualiza `BackendBaseUrl` y se vuelve a ejecutar `deploy`.

@@ -1,5 +1,5 @@
 # Despliegue de las apps de CampusLab en la instancia EC2 (ec2-apps).
-# Levanta: catalogo, reservas, BFF y frontend. Kafka/KPI/auditoria quedan fuera del alcance.
+# Levanta: catalogo, reservas, BFF y frontend.
 #
 #   cd infra/apps && cp .env.example .env   # completar con los datos reales de Cognito/Entra
 #   docker compose up -d --build

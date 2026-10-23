@@ -12,6 +12,11 @@ Parameters:
     Description: URL base del BFF, sin ruta ni proxy (http://<IP-elastica-EC2>:8080).
     Default: http://100.60.125.97:8080
 
+  RabbitAdminBaseUrl:
+    Type: String
+    Description: URL base del administrador de RabbitMQ (http://<IP-elastica-EC2-RabbitMQ>:8083), sin ruta.
+    Default: http://54.208.235.239:8083
+
   FrontendOriginNube:
     Type: String
     Description: Origen HTTPS del frontend desplegado en la EC2.
@@ -220,6 +225,43 @@ Resources:
       AuthorizationType: JWT
       AuthorizerId: !Ref CognitoJwtAuthorizer
       Target: !Join ['/', ['integrations', !Ref IntBookingsStatus]]
+
+  # ---------------- Prueba de mensajeria (front -> administrador de RabbitMQ) ----------------
+  IntRabbitTopologia:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      PayloadFormatVersion: '1.0'
+      IntegrationUri: !Sub '${RabbitAdminBaseUrl}/api/rabbitmq/topologia'
+
+  IntRabbitPublicar:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      PayloadFormatVersion: '1.0'
+      IntegrationUri: !Sub '${RabbitAdminBaseUrl}/api/rabbitmq/publicar'
+
+  RouteRabbitTopologiaGet:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      RouteKey: GET /api/rabbitmq/topologia
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoJwtAuthorizer
+      Target: !Join ['/', ['integrations', !Ref IntRabbitTopologia]]
+
+  RouteRabbitPublicarPost:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      RouteKey: POST /api/rabbitmq/publicar
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoJwtAuthorizer
+      Target: !Join ['/', ['integrations', !Ref IntRabbitPublicar]]
 
   DefaultStage:
     Type: AWS::ApiGatewayV2::Stage

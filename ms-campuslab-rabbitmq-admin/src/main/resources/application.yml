@@ -10,18 +10,18 @@ spring:
     username: ${RABBITMQ_USER:admin}
     password: ${RABBITMQ_PASS:admin123}
     virtual-host: /
+    publisher-confirm-type: correlated
+    publisher-returns: true
     listener:
       simple:
         acknowledge-mode: manual
         prefetch: 1
-        retry:
-          enabled: true
-          max-attempts: 3
-          initial-interval: 1000
 
 # Nombres de colas, exchanges y bindings CENTRALIZADOS (rubrica EP3, indicador 1, 12%).
 # Nada de nombres sueltos escritos a mano en las clases de negocio.
 campuslab:
+  # API de gestion de RabbitMQ (la lee TopologiaService para mostrar exchanges, colas y bindings reales)
+  management-url: ${RABBITMQ_MANAGEMENT_URL:http://localhost:15672}
   rabbitmq:
     exchange: campuslab.exchange
     dlx: campuslab.dlx

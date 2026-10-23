@@ -2,6 +2,8 @@ package cl.duoc.campuslab.rabbitadmin.config;
 
 import java.util.HashMap;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.DirectExchange;
@@ -23,6 +25,8 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RabbitMQTopologyConfig {
 
+    private static final Logger log = LoggerFactory.getLogger(RabbitMQTopologyConfig.class);
+
     private final RabbitMQProperties props;
 
     public RabbitMQTopologyConfig(RabbitMQProperties props) {
@@ -40,6 +44,10 @@ public class RabbitMQTopologyConfig {
     public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
         RabbitTemplate template = new RabbitTemplate(connectionFactory);
         template.setMandatory(true);
+        template.setConfirmCallback((correlation, ack, cause) -> log.info(
+                "Publisher confirm {} -> {}", ack ? "ACK" : "NACK", correlation != null ? correlation.getId() : "sin-id"));
+        template.setReturnsCallback(returned -> log.warn(
+                "Mensaje devuelto (sin cola destino): exchange={} routingKey={}", returned.getExchange(), returned.getRoutingKey()));
         return template;
     }
 

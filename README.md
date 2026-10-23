@@ -18,7 +18,7 @@ API Gateway gestionadas con **CloudFormation**.
 Navegador (React)                                  Usuario y contraseña ─┐
    │  Login Microsoft (Entra ID) ──► Cognito (JWT) ◄─────────────────────┘
    ▼
-AWS API Gateway (HTTP API, 12 rutas explícitas, JWT Authorizer)     <- definido en CloudFormation
+AWS API Gateway (HTTP API, 14 rutas explícitas, JWT Authorizer)     <- definido en CloudFormation
    ▼
 ms-campuslab-bff (valida JWT + rol + CORS) ──► ms-campuslab-catalog  (productos)  ──► RDS campuslab_catalog
                                            └─► ms-campuslab-bookings (reservas)   ──► RDS campuslab_bookings
@@ -45,8 +45,10 @@ ms-campuslab-rabbitmq-admin: dueño de la topología (declara colas, exchanges y
 
 - **Productores:** crear una reserva publica 2 eventos (notificación y documento); crear, editar o eliminar un
   producto del catálogo publica 1 evento de auditoría.
-- **Consumidores:** `@RabbitListener` con **ACK/NACK manual**. Un mensaje con el texto `FORZAR_FALLO` se rechaza sin
-  reencolar y RabbitMQ lo envía a su DLQ; el rechazo queda registrado en los logs del microservicio.
+- **Consumidores:** `@RabbitListener` con **ACK/NACK manual** (`prefetch: 1`). Distinguen dos tipos de error (`ManejadorErroresListener`):
+  **no recuperable** (mensaje inválido, p. ej. el texto `FORZAR_FALLO` o un payload vacío) → NACK sin reencolar y RabbitMQ lo envía a su DLQ;
+  **recuperable** (transitorio, p. ej. `FALLO_TRANSITORIO`, `TransientDataAccessException` o un timeout) → se reintenta hasta `max-reintentos` (3) republicando
+  el mensaje con la cabecera `x-intentos`, y si se agotan va a la DLQ. Cada decisión queda registrada en los logs del microservicio.
 - **Publisher confirms:** los productores usan `publisher-confirm-type: correlated` y `publisher-returns: true`; cada mensaje lleva un
   `CorrelationData` y el log registra `📨 Broker confirmó la recepción (publisher confirm ACK)` (o el NACK / la devolución si el broker no lo acepta).
 - **TTL:** las 3 colas de negocio tienen `x-message-ttl` (60 s, parámetro `message-ttl-ms` / `MESSAGE_TTL_MS` del administrador). Un mensaje que espera más
@@ -72,16 +74,20 @@ ms-campuslab-rabbitmq-admin: dueño de la topología (declara colas, exchanges y
 | `admin` | `Admin123!` | admin@WRIVAST.onmicrosoft.com | Admin: CRUD completo, cambio de estado y pestaña **"Mensajería (demo DLQ)"** |
 | `cliente` | `Cliente123!` | cliente@WRIVAST.onmicrosoft.com | Usuario: consulta y crea reservas |
 
-- La pestaña **Mensajería** (solo Admin) tiene dos botones que envían un mensaje `FORZAR_FALLO` a las colas muertas.
+- La pestaña **Mensajería** (solo Admin) tiene un panel **"Probar exchange, bindings y las 3 colas"**: muestra en vivo (cada 2,5 s) los exchanges, los bindings reales y las colas con sus mensajes, consumidores, publicados, procesados (ACK) y TTL. Permite enviar un mensaje por el exchange con una routing key (el broker lo confirma y el binding lo enruta a su cola), enviar a las 3 colas, marcar `FORZAR_FALLO` para que caiga en la cola muerta o probar una routing key sin binding (el broker la devuelve). Debajo, dos botones envían `FORZAR_FALLO` a las colas muertas.
 - **Swagger:** el botón *Obtener token* hace login contra Cognito, captura el JWT y lo aplica a todas las consultas
   (*Try it out → Execute*); además hay botones de **consulta rápida** del estado de cada cola con un clic. La API del
   administrador valida el JWT y exige el rol Admin (sin token responde 401; con el usuario `cliente`, 403).
+- **API del administrador (códigos de respuesta):** valida el cuerpo con Bean Validation (nombres de 3 a 100 caracteres, sin espacios ni símbolos y sin el prefijo
+  reservado `amq.`) y responde `{status, error, message, errores}`: **400** validación o nombre reservado, **404** cola o exchange inexistente (al consultar, borrar, purgar o crear
+  un binding), **409** al crear una cola o exchange que ya existe. `POST /api/rabbitmq/queues` acepta `conDeadLetter: true` para crear también su cola muerta `<nombre>-dlq`
+  enlazada al DLX. Las pruebas unitarias del administrador (`mvn test`) cubren estas reglas.
 - El botón "Iniciar sesión con Microsoft" también existe (federación Entra ID → Cognito), pero el tenant de Microsoft
   tiene *Security defaults* y exige verificación en dos pasos; por eso la demostración usa el acceso directo.
 
 ### Rutas del API Gateway (CloudFormation, sin proxy)
 
-12 rutas explícitas, todas con el autorizador JWT de Cognito (`infra/cloudformation/api-gateway-rutas.yaml`):
+14 rutas explícitas (12 del negocio y 2 de prueba de mensajería), todas con el autorizador JWT de Cognito (`infra/cloudformation/api-gateway-rutas.yaml`):
 
 | Ruta | Quién |
 |---|---|
@@ -89,8 +95,9 @@ ms-campuslab-rabbitmq-admin: dueño de la topología (declara colas, exchanges y
 | `GET`, `POST /api/catalog/resources` · `GET`, `PUT`, `DELETE /api/catalog/resources/{id}` | lectura: autenticado · escritura: **Admin** |
 | `GET`, `POST /api/bookings` · `GET`, `PUT`, `DELETE /api/bookings/{id}` | autenticado |
 | `PUT /api/bookings/{id}/status` | **Admin** u **Operador** |
+| `GET /api/rabbitmq/topologia` · `POST /api/rabbitmq/publicar` | **Admin** (van al administrador de RabbitMQ, puerto 8083) |
 
-Códigos: **200/201/204** correcto · **400** esquema inválido (`nombre`, `rut` con formato `12345678-9`, `fecha` ISO) ·
+Códigos: **200/201/204** correcto · **400** esquema inválido (`nombre`, `rut` con formato `12345678-9` y dígito verificador válido (módulo 11), `fecha` ISO) ·
 **401** sin token o inválido · **403** rol sin permiso.
 
 ---

@@ -78,13 +78,13 @@ Los roles se derivan del claim `cognito:groups` del token (grupos del User Pool)
 
 ## Esquema de datos validado (Bean Validation)
 
-**Reserva**: `nombre` (string, obligatorio), `rut` (string, formato `12345678-9`),
+**Reserva**: `nombre` (string, obligatorio), `rut` (string, formato `12345678-9` con dígito verificador válido según módulo 11),
 `fecha` (datetime ISO `yyyy-MM-ddTHH:mm:ss`), `productoId` (obligatorio).
 Un cuerpo inválido responde **400** con el detalle por campo.
 
 ## Fuera de alcance (por decisión del encargo)
 
-- **Kafka / streaming** y **KPIs / reportería** (los últimos servicios del caso).
+- **KPIs / reportería** (los últimos servicios del caso).
 - **Auditoría** por streaming.
 - **AWS Lambda**: el API Gateway integra por **HTTP_PROXY** directo al BFF en EC2.
 

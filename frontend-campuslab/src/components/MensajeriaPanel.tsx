@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 import type { Producto } from '../api';
+import { ProbarColasPanel } from './ProbarColasPanel';
 
 type Resultado = { ok: boolean; mensaje: string };
 
@@ -69,6 +70,8 @@ export function MensajeriaPanel() {
 
   return (
     <section className="panel">
+      <ProbarColasPanel />
+
       <div className="form-card">
         <h3>Demo de colas muertas (DLQ)</h3>
         <p className="hint">

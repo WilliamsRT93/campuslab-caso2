@@ -37,16 +37,16 @@ public class RabbitMQAdminController {
     @Operation(summary = "Crear una cola nueva")
     @PostMapping("/queues")
     public ResponseEntity<String> crearCola(@Valid @RequestBody CrearColaRequest request) {
-        resourceManager.crearCola(request.nombre());
+        resourceManager.crearCola(request.nombre(), request.conDeadLetter());
+        String dlq = request.conDeadLetter() ? " (con su cola muerta '" + request.nombre() + "-dlq')" : "";
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body("Cola '" + request.nombre() + "' creada exitosamente");
+                .body("Cola '" + request.nombre() + "' creada exitosamente" + dlq);
     }
 
     @Operation(summary = "Obtener informacion de una cola (mensajes, consumidores)")
     @GetMapping("/queues/{nombre}")
     public ResponseEntity<QueueInformation> obtenerCola(@PathVariable String nombre) {
-        QueueInformation info = resourceManager.obtenerInfoCola(nombre);
-        return info != null ? ResponseEntity.ok(info) : ResponseEntity.notFound().build();
+        return ResponseEntity.ok(resourceManager.obtenerInfoCola(nombre));
     }
 
     @Operation(summary = "Eliminar una cola")

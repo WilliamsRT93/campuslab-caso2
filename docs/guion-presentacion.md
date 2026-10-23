@@ -43,7 +43,7 @@ Recursos reales usados en la demo:
 
 ## 7:30 – 9:00 · Despliegue y cierre
 - **Consola AWS (EC2):** instancia `campuslab-ec2` **running**; `docker compose` con `catalog`, `bookings`, `bff` (y `frontend`).
-- Recordar el **alcance**: sin Kafka, sin KPIs/analytics, sin auditoría por streaming y **sin Lambda** (integración HTTP directa).
+- Recordar el **alcance**: sin KPIs/analytics, sin auditoría por streaming y **sin Lambda** (integración HTTP directa).
 - Cierre: "Sistema funcional y seguro, con identidad federada a Microsoft, puerta única en API Gateway y microservicios desplegados en EC2."
 
 ---
