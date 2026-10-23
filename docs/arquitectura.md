@@ -92,5 +92,5 @@ Un cuerpo inválido responde **400** con el detalle por campo.
 
 Los microservicios de reservas y catálogo publican eventos en un cluster RabbitMQ de 2 nodos (EC2 exclusiva): `campuslab.exchange`
 (direct) enruta `reserva.notificacion`, `reserva.documento` y `reserva.auditoria` a sus colas, y `campuslab.dlx` recibe los mensajes
-rechazados en `cola-*-dlq`. `ms-campuslab-rabbitmq-admin` es el único dueño de la topología. Detalle y diagramas en el `README.md` y en
+rechazados en `cola-*-dlq`. `ms-campuslab-rabbitmq-admin` es el único dueño de la topología. Los productores usan *publisher confirms* (el broker confirma cada mensaje) y las colas de negocio tienen un TTL de 60 s: lo que no se consume a tiempo expira hacia su DLQ (`reason: expired`). Detalle y diagramas en el `README.md` y en
 [`guia-despliegue.md`](guia-despliegue.md) (secciones 6 a 8).

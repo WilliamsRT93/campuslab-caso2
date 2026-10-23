@@ -36,9 +36,11 @@ case "$modo" in
     echo "   Filtro: eventos publicados, mensajes consumidos, ACK y envios a la DLQ"
     exec ssh "${SSH_OPTS[@]}" -i "$KEY_APPS" "ec2-user@${HOST_APPS}" \
       "cd /home/ec2-user/apps && sudo docker compose -f compose-ec2.yml logs -f --no-log-prefix --tail 0 bookings catalog 2>&1 \
-        | grep --line-buffered -E 'Evento publicado|Enviando notificacion|Generando documento|Registrando auditoria|confirmad|DLQ' \
+        | grep --line-buffered -E 'Evento publicado|publisher confirm|Mensaje devuelto|Enviando notificacion|Generando documento|Registrando auditoria|confirmad|DLQ' \
         | sed -u -e 's/^[0-9T:.Z-]* *//' \
                  -e 's/.*Evento publicado/\x1b[32m📥 Evento publicado/' \
+                 -e 's/.*\(Broker confirm[^ ]*\)/\x1b[32m📨 \1/' \
+                 -e 's/.*Mensaje devuelto/\x1b[31m↩️ Mensaje devuelto/' \
                  -e 's/.*\(Enviando notificacion\)/\x1b[36m📧 \1/' \
                  -e 's/.*\(Generando documento\)/\x1b[36m📄 \1/' \
                  -e 's/.*\(Registrando auditoria\)/\x1b[36m📋 \1/' \

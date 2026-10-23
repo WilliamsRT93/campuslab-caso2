@@ -127,12 +127,14 @@ public class RabbitMQTopologyConfig {
 
     /**
      * Cola de negocio durable con argumentos de dead-lettering apuntando al DLX,
-     * usando la misma routing key en la DLQ (patron 1 cola -> 1 DLQ).
+     * usando la misma routing key en la DLQ (patron 1 cola -> 1 DLQ). Los mensajes que
+     * esperan mas de messageTtlMs sin ser consumidos expiran y viajan a la DLQ (reason=expired).
      */
     private Queue buildQueueWithDlq(String logicalKey) {
         Map<String, Object> args = new HashMap<>();
         args.put("x-dead-letter-exchange", props.dlx());
         args.put("x-dead-letter-routing-key", props.routingKeys().get(logicalKey));
+        args.put("x-message-ttl", props.messageTtlMs());
         return QueueBuilder.durable(props.queues().get(logicalKey)).withArguments(args).build();
     }
 }

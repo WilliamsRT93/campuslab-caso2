@@ -30,6 +30,8 @@ campuslab:
       documentos: cola-documentos
       auditoria: cola-auditoria
     dlq-suffix: "-dlq"
+    # TTL de los mensajes en las colas de negocio (ms). Al vencer, van a la DLQ con reason=expired.
+    message-ttl-ms: ${MESSAGE_TTL_MS:60000}
     routing-keys:
       notificaciones: reserva.notificacion
       documentos: reserva.documento

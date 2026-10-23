@@ -47,6 +47,10 @@ ms-campuslab-rabbitmq-admin: dueño de la topología (declara colas, exchanges y
   producto del catálogo publica 1 evento de auditoría.
 - **Consumidores:** `@RabbitListener` con **ACK/NACK manual**. Un mensaje con el texto `FORZAR_FALLO` se rechaza sin
   reencolar y RabbitMQ lo envía a su DLQ; el rechazo queda registrado en los logs del microservicio.
+- **Publisher confirms:** los productores usan `publisher-confirm-type: correlated` y `publisher-returns: true`; cada mensaje lleva un
+  `CorrelationData` y el log registra `📨 Broker confirmó la recepción (publisher confirm ACK)` (o el NACK / la devolución si el broker no lo acepta).
+- **TTL:** las 3 colas de negocio tienen `x-message-ttl` (60 s, parámetro `message-ttl-ms` / `MESSAGE_TTL_MS` del administrador). Un mensaje que espera más
+  sin consumidor expira y RabbitMQ lo envía a su DLQ con `reason: expired`. Cambiar el TTL exige borrar y recrear las colas (RabbitMQ no permite redeclararlas con otros argumentos).
 - **Centralización:** los nombres viven en `application.yml` y se leen con `@ConfigurationProperties`; solo
   `ms-campuslab-rabbitmq-admin` declara la topología, los demás microservicios únicamente la referencian.
 

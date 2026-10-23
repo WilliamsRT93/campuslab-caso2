@@ -13,7 +13,8 @@ public record RabbitMQProperties(
         String dlx,
         Map<String, String> queues,
         String dlqSuffix,
-        Map<String, String> routingKeys) {
+        Map<String, String> routingKeys,
+        long messageTtlMs) {
 
     public String dlqNameFor(String logicalQueueKey) {
         return queues.get(logicalQueueKey) + dlqSuffix;

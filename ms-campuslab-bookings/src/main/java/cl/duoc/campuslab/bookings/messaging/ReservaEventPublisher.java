@@ -4,6 +4,7 @@ import cl.duoc.campuslab.bookings.Reserva;
 import cl.duoc.campuslab.bookings.config.RabbitMessagingProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 
@@ -31,11 +32,13 @@ public class ReservaEventPublisher {
     public void publicarReservaCreada(Reserva reserva) {
         String payload = construirPayload(reserva);
 
-        rabbitTemplate.convertAndSend(props.exchange(), props.routingKeyNotificaciones(), payload);
+        rabbitTemplate.convertAndSend(props.exchange(), props.routingKeyNotificaciones(), payload,
+                new CorrelationData("reserva-" + reserva.getId() + "-notificacion"));
         log.info("✅ Evento publicado -> {} (routingKey={}) para reserva #{}",
                 props.queueNotificaciones(), props.routingKeyNotificaciones(), reserva.getId());
 
-        rabbitTemplate.convertAndSend(props.exchange(), props.routingKeyDocumentos(), payload);
+        rabbitTemplate.convertAndSend(props.exchange(), props.routingKeyDocumentos(), payload,
+                new CorrelationData("reserva-" + reserva.getId() + "-documento"));
         log.info("✅ Evento publicado -> {} (routingKey={}) para reserva #{}",
                 props.queueDocumentos(), props.routingKeyDocumentos(), reserva.getId());
     }

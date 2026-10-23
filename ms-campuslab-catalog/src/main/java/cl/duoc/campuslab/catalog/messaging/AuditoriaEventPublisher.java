@@ -4,6 +4,7 @@ import cl.duoc.campuslab.catalog.Producto;
 import cl.duoc.campuslab.catalog.config.RabbitMessagingProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 
@@ -27,14 +28,16 @@ public class AuditoriaEventPublisher {
 
     public void publicarEvento(String accion, Producto producto) {
         String payload = construirPayload(accion, producto);
-        rabbitTemplate.convertAndSend(props.exchange(), props.routingKeyAuditoria(), payload);
+        rabbitTemplate.convertAndSend(props.exchange(), props.routingKeyAuditoria(), payload,
+                new CorrelationData("auditoria-" + accion + "-" + producto.getId()));
         log.info("✅ Evento publicado -> {} (routingKey={}) accion={} producto #{}",
                 props.queueAuditoria(), props.routingKeyAuditoria(), accion, producto.getId());
     }
 
     public void publicarEliminacion(String accion, Long productoId) {
         String payload = "Accion=" + accion + " | productoId=" + productoId;
-        rabbitTemplate.convertAndSend(props.exchange(), props.routingKeyAuditoria(), payload);
+        rabbitTemplate.convertAndSend(props.exchange(), props.routingKeyAuditoria(), payload,
+                new CorrelationData("auditoria-" + accion + "-" + productoId));
         log.info("✅ Evento publicado -> {} (routingKey={}) accion={} producto #{}",
                 props.queueAuditoria(), props.routingKeyAuditoria(), accion, productoId);
     }
