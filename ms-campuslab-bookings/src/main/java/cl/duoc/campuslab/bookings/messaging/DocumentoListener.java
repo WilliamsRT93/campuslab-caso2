@@ -1,7 +1,7 @@
 package cl.duoc.campuslab.bookings.messaging;
 
 import com.rabbitmq.client.Channel;
-import java.io.IOException;
+import cl.duoc.campuslab.bookings.config.RabbitMessagingProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -9,36 +9,40 @@ import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Service;
 
 /**
- * CONSUMIDOR del dominio "documentos". Simula la generacion del ticket/PDF
- * de la reserva. Mismo patron de ACK/NACK manual que NotificacionListener,
- * en una clase separada porque pertenece a un dominio funcional distinto
- * (rubrica EP3: consumidores agrupados por dominio).
+ * CONSUMIDOR del dominio "documentos". Simula la generacion del ticket/PDF de la reserva (clase separada: dominio funcional distinto).
+ *
+ * Confirma los mensajes EXPLICITAMENTE (ACK manual) y distingue dos tipos de error
+ * (ver ManejadorErroresListener):
+ *  - NO recuperable (payload invalido / FORZAR_FALLO): NACK sin reencolar y RabbitMQ lo manda a la DLQ.
+ *  - Recuperable (p. ej. FALLO_TRANSITORIO): se reintenta con limite y, si se agotan, va a la DLQ.
  */
 @Service
 public class DocumentoListener {
 
     private static final Logger log = LoggerFactory.getLogger(DocumentoListener.class);
 
+    private final ManejadorErroresListener errores;
+    private final RabbitMessagingProperties props;
+
+    public DocumentoListener(ManejadorErroresListener errores, RabbitMessagingProperties props) {
+        this.errores = errores;
+        this.props = props;
+    }
+
     @RabbitListener(queues = "${campuslab.rabbitmq.queue-documentos}")
-    public void recibir(String payload, Channel channel, @Header("amqp_deliveryTag") long deliveryTag) {
+    public void recibir(String payload, Channel channel, @Header("amqp_deliveryTag") long deliveryTag,
+                        @Header(name = ManejadorErroresListener.HEADER_INTENTOS, required = false) Integer intentosPrevios) {
+        int intentos = intentosPrevios == null ? 0 : intentosPrevios;
         try {
             if (payload == null || payload.isBlank() || payload.contains("FORZAR_FALLO")) {
                 throw new IllegalArgumentException("Payload invalido para generar documento");
             }
+            errores.simularFalloTransitorio(payload, intentos);
             log.info("📄 Generando documento/ticket -> {}", payload);
             channel.basicAck(deliveryTag, false);
             log.info("✅ Documento generado y confirmado (ACK)");
         } catch (Exception e) {
-            log.error("❌ Error generando documento, enviando a DLQ: {}", e.getMessage());
-            nackSinReencolar(channel, deliveryTag);
-        }
-    }
-
-    private void nackSinReencolar(Channel channel, long deliveryTag) {
-        try {
-            channel.basicNack(deliveryTag, false, false);
-        } catch (IOException ioException) {
-            log.error("No se pudo hacer NACK del mensaje: {}", ioException.getMessage());
+            errores.resolver(channel, deliveryTag, payload, intentos, props.exchange(), props.routingKeyDocumentos(), "documento", e);
         }
     }
 }

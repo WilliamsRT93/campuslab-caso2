@@ -28,16 +28,15 @@ spring:
       simple:
         acknowledge-mode: manual
         prefetch: 1
-        retry:
-          enabled: true
-          max-attempts: 3
-          initial-interval: 1000
 
 # Mismos nombres que declara ms-campuslab-rabbitmq-admin (duena de la topologia).
 # Este microservicio solo los referencia para publicar/consumir.
 campuslab:
   rabbitmq:
     exchange: campuslab.exchange
+    # Reintentos de errores recuperables antes de enviar el mensaje a la DLQ (ManejadorErroresListener)
+    max-reintentos: 3
+    espera-reintento-ms: 1000
     queue-auditoria: cola-auditoria
     routing-key-auditoria: reserva.auditoria
 

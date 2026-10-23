@@ -28,10 +28,6 @@ spring:
       simple:
         acknowledge-mode: manual
         prefetch: 1
-        retry:
-          enabled: true
-          max-attempts: 3
-          initial-interval: 1000
 
 # Nombres de exchange/colas/routing-keys CENTRALIZADOS (misma topologia que declara
 # ms-campuslab-rabbitmq-admin -- este microservicio NO vuelve a declarar colas/exchanges,
@@ -39,6 +35,9 @@ spring:
 campuslab:
   rabbitmq:
     exchange: campuslab.exchange
+    # Reintentos de errores recuperables antes de enviar el mensaje a la DLQ (ManejadorErroresListener)
+    max-reintentos: 3
+    espera-reintento-ms: 1000
     queue-notificaciones: cola-notificaciones
     queue-documentos: cola-documentos
     routing-key-notificaciones: reserva.notificacion
