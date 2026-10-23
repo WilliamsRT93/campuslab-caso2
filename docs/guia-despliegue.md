@@ -69,6 +69,46 @@ reconstruir el frontend (`docker compose up -d --build frontend`).
 - `http://<IP_PUBLICA_EC2>:8090` → abre el frontend, login con Microsoft.
 - Postman → colección `postman/CampusLab.postman_collection.json` con el INVOKE URL.
 
+## 6. Base de datos RDS PostgreSQL (EP3)
+
+1. Crear una instancia RDS PostgreSQL (`campuslab-postgres`, clase `db.t3.micro`) con acceso público solo para la demostración.
+2. En su Security Group abrir el puerto **5432**.
+3. Crear una base por microservicio: `CREATE DATABASE campuslab_bookings;` y `CREATE DATABASE campuslab_catalog;`.
+4. Entregar a cada microservicio `DB_URL` (`jdbc:postgresql://<endpoint>:5432/<base>`), `DB_DRIVER=org.postgresql.Driver`, `DB_USER` y `DB_PASSWORD`
+   (ver `infra/apps/.env.example`). Hibernate crea las tablas al arrancar; sin esas variables se usa H2 en memoria.
+5. Visualizar las bases con DBeaver (conexión PostgreSQL al endpoint de RDS).
+
+## 7. RabbitMQ en una EC2 exclusiva (EP3)
+
+1. Lanzar una EC2 Amazon Linux 2023 (`campuslab-rabbitmq`) con su propio par de claves.
+2. Security Group: **22** (SSH), **5672-5673** (AMQP), **15672-15673** (panel nativo), **8083** (API administrativa y Swagger);
+   **4369** y **25672** solo desde el mismo Security Group (comunicación entre los nodos del cluster).
+3. Asociar una **IP elástica** (EC2 → Direcciones IP elásticas → Asignar → Asociar): se mantiene aunque el laboratorio se apague.
+4. Instalar Docker con el plugin Compose, copiar `infra/rabbitmq-cluster/` y ejecutar `docker compose up -d`.
+   Los dos nodos (`rabbitmq-1` y `rabbitmq-2`) comparten cookie y se descubren con `rabbitmq.conf`; el servicio usa `restart: unless-stopped`
+   para subir solo al reiniciar el laboratorio.
+5. Verificar el cluster: `docker exec rabbitmq-1 rabbitmqctl cluster_status` debe listar ambos nodos en *Running Nodes*.
+6. Microservicio administrador: `mvn clean package` en `ms-campuslab-rabbitmq-admin`, copiar el JAR a `/home/ec2-user/rabbitmq-admin.jar`
+   e instalar `infra/rabbitmq-cluster/rabbitmq-admin.service` con systemd. Al arrancar **declara los exchanges, las colas, las DLQ y los bindings**.
+7. Apuntar los microservicios: `RABBITMQ_HOST=<IP elástica>`, `RABBITMQ_PORT`, `RABBITMQ_USER`, `RABBITMQ_PASS`.
+8. Verificar: panel `http://<IP>:15672`, Swagger `http://<IP>:8083/swagger-ui.html` y `ms-campuslab-rabbitmq-admin/monitor-colas.sh`.
+
+Las 6 colas son *classic* y viven en el nodo `rabbitmq-1`; el nodo 2 replica solo los metadatos (ver el README, sección Arquitectura).
+
+## 8. Rutas del API Gateway con CloudFormation (EP3)
+
+Reemplaza los comandos manuales de la sección 4. La plantilla `infra/cloudformation/api-gateway-rutas.yaml` define las **12 rutas explícitas**
+(sin `{proxy+}`), el autorizador JWT de Cognito, una integración por recurso y el CORS.
+
+```bash
+aws cloudformation deploy --stack-name campuslab-api-gateway \
+  --template-file infra/cloudformation/api-gateway-rutas.yaml \
+  --parameter-overrides BackendBaseUrl=http://<IP-ELASTICA-EC2>:8080 FrontendOriginNube=https://<IP-ELASTICA-EC2>
+aws apigatewayv2 get-routes --api-id <ApiId> --query "Items[].RouteKey" --output text   # debe listar las 12 rutas
+```
+
+Si cambia la IP del BFF solo se actualiza `BackendBaseUrl` y se vuelve a ejecutar `deploy`.
+
 ## Ejecución local (sin nube)
 
 Para desarrollo, los tres microservicios corren con perfil `local` (sin validar JWT):

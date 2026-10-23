@@ -87,3 +87,10 @@ Un cuerpo inválido responde **400** con el detalle por campo.
 - **Kafka / streaming** y **KPIs / reportería** (los últimos servicios del caso).
 - **Auditoría** por streaming.
 - **AWS Lambda**: el API Gateway integra por **HTTP_PROXY** directo al BFF en EC2.
+
+## Mensajería asíncrona (EP3)
+
+Los microservicios de reservas y catálogo publican eventos en un cluster RabbitMQ de 2 nodos (EC2 exclusiva): `campuslab.exchange`
+(direct) enruta `reserva.notificacion`, `reserva.documento` y `reserva.auditoria` a sus colas, y `campuslab.dlx` recibe los mensajes
+rechazados en `cola-*-dlq`. `ms-campuslab-rabbitmq-admin` es el único dueño de la topología. Detalle y diagramas en el `README.md` y en
+[`guia-despliegue.md`](guia-despliegue.md) (secciones 6 a 8).
