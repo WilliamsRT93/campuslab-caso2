@@ -36,6 +36,7 @@
     <input id="clave" type="password" value="Admin123!" autocomplete="current-password" aria-label="Contraseña">
     <button id="btnToken">🔑 Obtener token</button>
     <button id="btnCopiar" class="sec" disabled>Copiar token</button>
+    <button id="btnAlterar" class="sec" disabled title="Modifica la firma del token para provocar un 401 (error de autenticación)">⚠️ Alterar token</button>
     <button id="btnSalir" class="sec" disabled>Salir</button>
     <span id="estado">Sin token</span>
   </div>
@@ -55,9 +56,11 @@
 <script>
 const REGION = 'us-east-1';
 const CLIENT_ID = '6r3af8ucc96okla0ujph9pru4a';
-const COLAS = ['cola-notificaciones', 'cola-documentos', 'cola-auditoria',
-               'cola-notificaciones-dlq', 'cola-documentos-dlq', 'cola-auditoria-dlq'];
+const COLAS = ['cola-notificaciones', 'cola-documentos', 'cola-auditoria', 'cola-eventos-reservas', 'cola-eventos-catalogo',
+               'cola-notificaciones-dlq', 'cola-documentos-dlq', 'cola-auditoria-dlq',
+               'cola-eventos-reservas-dlq', 'cola-eventos-catalogo-dlq'];
 let token = sessionStorage.getItem('campuslab_swagger_token') || null;
+let alterado = sessionStorage.getItem('campuslab_swagger_alterado') === '1';
 
 const $ = (id) => document.getElementById(id);
 
@@ -75,21 +78,35 @@ function refrescarUI() {
   const hayToken = !!token;
   $('btnCopiar').disabled = !hayToken;
   $('btnSalir').disabled = !hayToken;
+  $('btnAlterar').disabled = !hayToken || alterado;
   $('rapidas').style.display = hayToken ? 'block' : 'none';
   if (hayToken) {
     const c = decodificar(token);
     const minutos = Math.max(0, Math.round((c.exp * 1000 - Date.now()) / 60000));
     const grupos = (c['cognito:groups'] || []).join(', ') || 'sin grupo';
-    pintarEstado('✅ Token capturado · ' + (c.username || '?') + ' · ' + grupos + ' · expira en ' + minutos + ' min', 'ok');
+    if (alterado) pintarEstado('⚠️ Token ALTERADO (firma modificada) · las llamadas darán 401 · pulse Obtener token para restaurar', 'mal');
+    else pintarEstado('✅ Token capturado · ' + (c.username || '?') + ' · ' + grupos + ' · expira en ' + minutos + ' min', 'ok');
   } else {
     pintarEstado('Sin token');
+  }
+}
+
+// Reintenta si la red falla un instante ("Failed to fetch"); un error de credenciales no se reintenta.
+async function fetchConReintento(url, opciones, intentos = 3) {
+  for (let i = 1; ; i++) {
+    try { return await fetch(url, opciones); }
+    catch (e) {
+      if (i >= intentos) throw new Error('Sin conexion con Cognito (' + e.message + '). Revise la red y pulse Obtener token de nuevo.');
+      pintarEstado('Reintentando conexion con Cognito (' + i + '/' + (intentos - 1) + ')...');
+      await new Promise((r) => setTimeout(r, 800 * i));
+    }
   }
 }
 
 async function obtenerToken() {
   pintarEstado('Autenticando con Cognito...');
   try {
-    const resp = await fetch('https://cognito-idp.' + REGION + '.amazonaws.com/', {
+    const resp = await fetchConReintento('https://cognito-idp.' + REGION + '.amazonaws.com/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-amz-json-1.1',
@@ -106,6 +123,8 @@ async function obtenerToken() {
       throw new Error(datos.message || 'No se pudo autenticar');
     }
     token = datos.AuthenticationResult.AccessToken;
+    alterado = false;
+    sessionStorage.removeItem('campuslab_swagger_alterado');
     sessionStorage.setItem('campuslab_swagger_token', token);
     refrescarUI();
   } catch (e) {
@@ -169,8 +188,22 @@ VALIDADORES.forEach((v) => {
   $('botonesValidacion').appendChild(b);
 });
 
+// Cambia unos caracteres de la FIRMA del JWT: el token sigue pareciendo valido pero Cognito/Spring lo rechazan (401).
+$('btnAlterar').onclick = () => {
+  const partes = token.split('.');
+  const f = partes[2];
+  const medio = Math.floor(f.length / 2);
+  const cambio = f.substr(medio, 4).split('').map((ch) => (ch === 'A' ? 'B' : 'A')).join('');
+  partes[2] = f.substring(0, medio) + cambio + f.substring(medio + 4);
+  token = partes.join('.');
+  alterado = true;
+  sessionStorage.setItem('campuslab_swagger_token', token);
+  sessionStorage.setItem('campuslab_swagger_alterado', '1');
+  refrescarUI();
+};
+
 $('btnToken').onclick = obtenerToken;
-$('btnSalir').onclick = () => { token = null; sessionStorage.removeItem('campuslab_swagger_token'); $('resultado').style.display = 'none'; refrescarUI(); };
+$('btnSalir').onclick = () => { token = null; alterado = false; sessionStorage.removeItem('campuslab_swagger_alterado'); sessionStorage.removeItem('campuslab_swagger_token'); $('resultado').style.display = 'none'; refrescarUI(); };
 $('btnCopiar').onclick = () => navigator.clipboard.writeText(token).then(() => pintarEstado('✅ Token copiado al portapapeles', 'ok'));
 
 window.ui = SwaggerUIBundle({
