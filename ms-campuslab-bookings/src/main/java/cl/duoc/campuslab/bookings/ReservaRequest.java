@@ -21,6 +21,7 @@ public class ReservaRequest {
     @NotBlank(message = "El rut es obligatorio")
     @Pattern(regexp = "^[0-9]{7,8}-[0-9kK]$",
              message = "El rut debe tener formato 12345678-9 (sin puntos)")
+    @RutChileno
     private String rut;
 
     @NotNull(message = "La fecha es obligatoria")

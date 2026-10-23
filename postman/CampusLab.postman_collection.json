@@ -96,7 +96,7 @@
           "request": {
             "method": "POST",
             "header": [ { "key": "Content-Type", "value": "application/json" } ],
-            "body": { "mode": "raw", "raw": "{\n  \"nombre\": \"Ana Perez\",\n  \"rut\": \"12345678-9\",\n  \"fecha\": \"2026-09-20T10:30:00\",\n  \"productoId\": 1\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"nombre\": \"Ana Perez\",\n  \"rut\": \"12345678-5\",\n  \"fecha\": \"2026-09-20T10:30:00\",\n  \"productoId\": 1\n}" },
             "url": { "raw": "{{base_url}}/api/bookings", "host": ["{{base_url}}"], "path": ["api", "bookings"] }
           },
           "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
