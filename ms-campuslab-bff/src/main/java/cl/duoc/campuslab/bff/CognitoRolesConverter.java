@@ -22,7 +22,7 @@ public class CognitoRolesConverter implements Converter<Jwt, AbstractAuthenticat
         Object groups = jwt.getClaim("cognito:groups");
         if (groups instanceof List<?> lista) {
             for (Object grupo : lista) {
-                authorities.add(new SimpleGrantedAuthority("ROLE_" + grupo.toString().toUpperCase()));
+                authorities.add(new SimpleGrantedAuthority("ROLE_" + grupo.toString().toUpperCase(java.util.Locale.ROOT)));
             }
         }
         return new JwtAuthenticationToken(jwt, authorities, jwt.getSubject());
