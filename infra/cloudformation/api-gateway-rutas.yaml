@@ -17,6 +17,16 @@ Parameters:
     Description: URL base del administrador de RabbitMQ (http://<IP-elastica-EC2-RabbitMQ>:8083), sin ruta.
     Default: http://54.208.235.239:8083
 
+  KafkaAdminBaseUrl:
+    Type: String
+    Description: URL base del administrador de Kafka (EP3, http://<IP-elastica-EC2-Kafka>:8084), sin ruta.
+    Default: http://54.164.1.235:8084
+
+  ReporteriaBaseUrl:
+    Type: String
+    Description: URL base del panel de reporteria/auditoria (EP5, http://<IP-elastica-EC2-Kafka>:8085), sin ruta.
+    Default: http://54.164.1.235:8085
+
   FrontendOriginNube:
     Type: String
     Description: Origen HTTPS del frontend desplegado en la EC2.
@@ -262,6 +272,188 @@ Resources:
       AuthorizationType: JWT
       AuthorizerId: !Ref CognitoJwtAuthorizer
       Target: !Join ['/', ['integrations', !Ref IntRabbitPublicar]]
+
+  # ---------------- EP5: administrador de Kafka (front -> ms-campuslab-kafka-admin) ----------------
+  IntKafkaTopics:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      PayloadFormatVersion: '1.0'
+      IntegrationUri: !Sub '${KafkaAdminBaseUrl}/api/kafka/topics'
+
+  IntKafkaTopicItem:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      PayloadFormatVersion: '1.0'
+      IntegrationUri: !Sub '${KafkaAdminBaseUrl}/api/kafka/topics/{nombre}'
+
+  IntKafkaTopicConfig:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      PayloadFormatVersion: '1.0'
+      IntegrationUri: !Sub '${KafkaAdminBaseUrl}/api/kafka/topics/{nombre}/config'
+
+  IntKafkaTopicParticiones:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      PayloadFormatVersion: '1.0'
+      IntegrationUri: !Sub '${KafkaAdminBaseUrl}/api/kafka/topics/{nombre}/particiones'
+
+  IntKafkaConsumerGroups:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      PayloadFormatVersion: '1.0'
+      IntegrationUri: !Sub '${KafkaAdminBaseUrl}/api/kafka/consumer-groups'
+
+  IntKafkaConsumerGroupItem:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      PayloadFormatVersion: '1.0'
+      IntegrationUri: !Sub '${KafkaAdminBaseUrl}/api/kafka/consumer-groups/{groupId}'
+
+  RouteKafkaTopicsGet:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      RouteKey: GET /api/kafka/topics
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoJwtAuthorizer
+      Target: !Join ['/', ['integrations', !Ref IntKafkaTopics]]
+
+  RouteKafkaTopicsPost:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      RouteKey: POST /api/kafka/topics
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoJwtAuthorizer
+      Target: !Join ['/', ['integrations', !Ref IntKafkaTopics]]
+
+  RouteKafkaTopicItemGet:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      RouteKey: GET /api/kafka/topics/{nombre}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoJwtAuthorizer
+      Target: !Join ['/', ['integrations', !Ref IntKafkaTopicItem]]
+
+  RouteKafkaTopicItemDelete:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      RouteKey: DELETE /api/kafka/topics/{nombre}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoJwtAuthorizer
+      Target: !Join ['/', ['integrations', !Ref IntKafkaTopicItem]]
+
+  RouteKafkaTopicConfigPatch:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      RouteKey: PATCH /api/kafka/topics/{nombre}/config
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoJwtAuthorizer
+      Target: !Join ['/', ['integrations', !Ref IntKafkaTopicConfig]]
+
+  RouteKafkaTopicParticionesPatch:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      RouteKey: PATCH /api/kafka/topics/{nombre}/particiones
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoJwtAuthorizer
+      Target: !Join ['/', ['integrations', !Ref IntKafkaTopicParticiones]]
+
+  RouteKafkaConsumerGroupsGet:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      RouteKey: GET /api/kafka/consumer-groups
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoJwtAuthorizer
+      Target: !Join ['/', ['integrations', !Ref IntKafkaConsumerGroups]]
+
+  RouteKafkaConsumerGroupItemGet:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      RouteKey: GET /api/kafka/consumer-groups/{groupId}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoJwtAuthorizer
+      Target: !Join ['/', ['integrations', !Ref IntKafkaConsumerGroupItem]]
+
+  IntKafkaPrueba:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      PayloadFormatVersion: '1.0'
+      IntegrationUri: !Sub '${KafkaAdminBaseUrl}/api/kafka/prueba/publicar'
+
+  RouteKafkaPruebaPost:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      RouteKey: POST /api/kafka/prueba/publicar
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoJwtAuthorizer
+      Target: !Join ['/', ['integrations', !Ref IntKafkaPrueba]]
+
+  # ---------------- EP5: panel de reporteria/auditoria (front -> ms-campuslab-reporteria) ----------------
+  IntReporteriaVentas:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      PayloadFormatVersion: '1.0'
+      IntegrationUri: !Sub '${ReporteriaBaseUrl}/api/reporteria/ventas'
+
+  IntReporteriaAuditoria:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      PayloadFormatVersion: '1.0'
+      IntegrationUri: !Sub '${ReporteriaBaseUrl}/api/reporteria/auditoria'
+
+  RouteReporteriaVentasGet:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      RouteKey: GET /api/reporteria/ventas
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoJwtAuthorizer
+      Target: !Join ['/', ['integrations', !Ref IntReporteriaVentas]]
+
+  RouteReporteriaAuditoriaGet:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      RouteKey: GET /api/reporteria/auditoria
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoJwtAuthorizer
+      Target: !Join ['/', ['integrations', !Ref IntReporteriaAuditoria]]
 
   DefaultStage:
     Type: AWS::ApiGatewayV2::Stage

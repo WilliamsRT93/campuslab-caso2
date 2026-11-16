@@ -28,6 +28,8 @@ spring:
       simple:
         acknowledge-mode: manual
         prefetch: 1
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092,localhost:9093}
 
 # Mismos nombres que declara ms-campuslab-rabbitmq-admin (duena de la topologia).
 # Este microservicio solo los referencia para publicar/consumir.
@@ -43,6 +45,10 @@ campuslab:
     topic-exchange: campuslab.eventos
     queue-eventos-catalogo: cola-eventos-catalogo
     routing-key-evento-catalogo: catalogo.producto
+  # Topico Kafka de auditoria (EP5). Este microservicio es el UNICO productor;
+  # el consumidor (ms-campuslab-reporteria) nunca publica aca -- regla de diseno de EP5.
+  kafka:
+    topico-auditoria: campuslab.auditoria
 
 management:
   endpoints:

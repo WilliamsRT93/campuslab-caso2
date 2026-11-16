@@ -1,0 +1,52 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: ms-campuslab-reporteria
+  datasource:
+    url: ${DB_URL:jdbc:h2:mem:reporteria;DB_CLOSE_DELAY=-1}
+    driver-class-name: ${DB_DRIVER:org.h2.Driver}
+    username: ${DB_USER:sa}
+    password: ${DB_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  h2:
+    console:
+      enabled: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092,localhost:9093}
+    consumer:
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+    listener:
+      ack-mode: record
+
+# Nombres de topicos y consumer groups CENTRALIZADOS (rubrica EP5, indicador 1, 12%).
+# Este microservicio SOLO CONSUME -- nunca publica en estos mismos topicos (regla de diseno:
+# el productor y el consumidor de un mismo flujo nunca pueden ser el mismo microservicio).
+# Productores reales: ms-campuslab-bookings (ventas) y ms-campuslab-catalog (auditoria).
+campuslab:
+  kafka:
+    topics:
+      ventas: campuslab.ventas
+      auditoria: campuslab.auditoria
+    consumer-groups:
+      ventas: reporteria-ventas
+      auditoria: reporteria-auditoria
+    # Reintentos de errores recuperables (parseo/BD transitoria) antes de enviar a la DLT (topico.dlt)
+    max-reintentos: 3
+    espera-reintento-ms: 1000
+  security:
+    enabled: ${SECURITY_ENABLED:true}
+    jwk-set-uri: ${COGNITO_JWK_SET_URI:https://cognito-idp.us-east-1.amazonaws.com/us-east-1_dBOQeniQq/.well-known/jwks.json}
+    issuer: ${COGNITO_ISSUER_URI:https://cognito-idp.us-east-1.amazonaws.com/us-east-1_dBOQeniQq}
+    client-id: ${COGNITO_CLIENT_ID:6r3af8ucc96okla0ujph9pru4a}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

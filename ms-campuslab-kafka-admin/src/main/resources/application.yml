@@ -1,0 +1,47 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: ms-campuslab-kafka-admin
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092,localhost:9093}
+
+# Nombres de topicos y parametros de administracion CENTRALIZADOS (rubrica EP5, indicador 1, 12% y
+# el indicador de "parametros de administracion de topicos", 12%). Nada de nombres o retention/particiones
+# escritos a mano en el codigo de negocio -- todo se lee desde aca via KafkaAdminProperties.
+campuslab:
+  kafka:
+    topics:
+      ventas:
+        nombre: campuslab.ventas
+        particiones: 3
+        factor-replicacion: 2
+        retencion-ms: 604800000      # 7 dias: reportes de ventas se consultan en una ventana corta
+        cleanup-policy: delete
+      auditoria:
+        nombre: campuslab.auditoria
+        particiones: 3
+        factor-replicacion: 2
+        retencion-ms: 2592000000     # 30 dias: la auditoria debe poder revisarse mas atras en el tiempo
+        cleanup-policy: delete
+    dlt-suffix: ".dlt"
+  # Seguridad de la API: valida el JWT de Cognito y exige rol Admin (grupo "Admin"), mismo IDaaS que el
+  # resto de la plataforma CampusLab (Cognito federado con Entra ID).
+  security:
+    enabled: ${SECURITY_ENABLED:true}
+    jwk-set-uri: ${COGNITO_JWK_SET_URI:https://cognito-idp.us-east-1.amazonaws.com/us-east-1_dBOQeniQq/.well-known/jwks.json}
+    issuer: ${COGNITO_ISSUER_URI:https://cognito-idp.us-east-1.amazonaws.com/us-east-1_dBOQeniQq}
+    client-id: ${COGNITO_CLIENT_ID:6r3af8ucc96okla0ujph9pru4a}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs

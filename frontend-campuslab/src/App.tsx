@@ -14,9 +14,10 @@ import {
 import { ProductosPanel } from './components/ProductosPanel';
 import { ReservasPanel } from './components/ReservasPanel';
 import { MensajeriaPanel } from './components/MensajeriaPanel';
+import { ReporteriaPanel } from './components/ReporteriaPanel';
 import './App.css';
 
-type Tab = 'productos' | 'reservas' | 'mensajeria';
+type Tab = 'productos' | 'reservas' | 'mensajeria' | 'reporteria';
 
 // React (modo desarrollo) ejecuta los efectos dos veces; un codigo de Cognito solo se puede canjear una vez.
 let codigoCanjeado: string | null = null;
@@ -164,6 +165,11 @@ export default function App() {
             Mensajeria (demo DLQ)
           </button>
         )}
+        {identidad?.isAdmin && (
+          <button className={tab === 'reporteria' ? 'active' : ''} onClick={() => setTab('reporteria')}>
+            Reporteria / Auditoria
+          </button>
+        )}
       </nav>
 
       {error && <p className="error">{error}</p>}
@@ -171,6 +177,7 @@ export default function App() {
       {tab === 'productos' && <ProductosPanel isAdmin={identidad?.isAdmin ?? false} />}
       {tab === 'reservas' && <ReservasPanel isAdmin={identidad?.isAdmin ?? false} />}
       {tab === 'mensajeria' && identidad?.isAdmin && <MensajeriaPanel />}
+      {tab === 'reporteria' && identidad?.isAdmin && <ReporteriaPanel />}
     </main>
   );
 }

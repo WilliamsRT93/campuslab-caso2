@@ -28,6 +28,46 @@ export interface Identidad {
   isAdmin: boolean;
 }
 
+/** Fila del panel de ventas en tiempo real (EP5, alimentada por ms-campuslab-reporteria via Kafka). */
+export interface ReporteVenta {
+  id: number;
+  reservaId: number;
+  nombre: string;
+  rut: string;
+  fecha: string;
+  productoId: number;
+  estado: string;
+  recibidoEn: string;
+}
+
+/** Fila del registro de auditoria del catalogo (EP5, alimentada por ms-campuslab-reporteria via Kafka). */
+export interface EventoAuditoria {
+  id: number;
+  accion: string;
+  productoId: number;
+  nombre: string | null;
+  tipo: string | null;
+  stock: number | null;
+  disponible: boolean | null;
+  recibidoEn: string;
+}
+
+/** Topico de Kafka con su configuracion (EP5, lo entrega el administrador de Kafka). */
+export interface TopicoKafka {
+  nombre: string;
+  particiones: number;
+  factorReplicacion: number;
+  configuracion: Record<string, string>;
+}
+
+/** Consumer group de Kafka con sus topicos asignados (EP5). */
+export interface ConsumerGroupKafka {
+  groupId: string;
+  estado: string;
+  numeroDeMiembros: number;
+  topicosAsignados: string[];
+}
+
 /** Topologia en vivo de RabbitMQ (la entrega el administrador de RabbitMQ, solo rol Admin). */
 export interface ExchangeInfo { nombre: string; tipo: string; durable: boolean; funcion: string }
 export interface ColaInfo {
@@ -56,6 +96,15 @@ export interface ResultadoPublicacion {
   confirmado: boolean;
   ruteado: boolean;
   colasDestino: string[];
+  detalle: string;
+}
+
+/** Resultado de publicar un caso de prueba Kafka (valido o malformado), via ms-campuslab-kafka-admin. */
+export interface ResultadoPruebaKafka {
+  topico: string;
+  payloadEnviado: string;
+  particion: number;
+  offset: number;
   detalle: string;
 }
 
@@ -93,6 +142,16 @@ export const api = {
   topologia: () => request<Topologia>('GET', '/api/rabbitmq/topologia'),
   publicar: (p: { exchange: string; routingKey: string; mensaje: string }) =>
     request<ResultadoPublicacion>('POST', '/api/rabbitmq/publicar', p),
+
+  // EP5: panel de reporteria/auditoria (ms-campuslab-reporteria, consumidor Kafka)
+  listarVentas: () => request<ReporteVenta[]>('GET', '/api/reporteria/ventas'),
+  listarAuditoriaKafka: () => request<EventoAuditoria[]>('GET', '/api/reporteria/auditoria'),
+
+  // EP5: administrador de Kafka (ms-campuslab-kafka-admin)
+  listarTopicosKafka: () => request<TopicoKafka[]>('GET', '/api/kafka/topics'),
+  listarConsumerGroupsKafka: () => request<ConsumerGroupKafka[]>('GET', '/api/kafka/consumer-groups'),
+  publicarPruebaKafka: (p: { topicoLogico: 'ventas' | 'auditoria'; tipoCaso: 'VALIDO' | 'MALFORMADO' }) =>
+    request<ResultadoPruebaKafka>('POST', '/api/kafka/prueba/publicar', p),
 
   listarProductos: () => request<Producto[]>('GET', '/api/catalog/resources'),
   crearProducto: (p: Omit<Producto, 'id'>) => request<Producto>('POST', '/api/catalog/resources', p),

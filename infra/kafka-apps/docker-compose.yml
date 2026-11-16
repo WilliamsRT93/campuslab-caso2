@@ -1,0 +1,28 @@
+# Microservicios de Kafka (EP5) que corren en la MISMA EC2 dedicada que el cluster
+# (infra/kafka-cluster) y Kafka-UI (infra/kafka-ui): el administrador de topicos y el
+# panel de reporteria/auditoria. Se despliegan aparte porque son microservicios de
+# aplicacion, no infraestructura del broker -- misma separacion que infra/apps.
+#
+#   cd infra/kafka-apps && docker compose up -d --build
+#   kafka-admin: http://<IP>:8084/swagger-ui.html   |   reporteria: http://<IP>:8085/api/reporteria/ventas
+#
+# network_mode host: llegan a localhost:9092/9093 (publicados por infra/kafka-cluster en
+# la misma EC2) sin tener que unir redes de dos proyectos docker-compose distintos.
+services:
+  kafka-admin:
+    build: ../../ms-campuslab-kafka-admin
+    container_name: campuslab-kafka-admin
+    network_mode: host
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: localhost:9092,localhost:9093
+      SECURITY_ENABLED: ${SECURITY_ENABLED:-true}
+    restart: unless-stopped
+
+  reporteria:
+    build: ../../ms-campuslab-reporteria
+    container_name: campuslab-reporteria
+    network_mode: host
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: localhost:9092,localhost:9093
+      SECURITY_ENABLED: ${SECURITY_ENABLED:-true}
+    restart: unless-stopped

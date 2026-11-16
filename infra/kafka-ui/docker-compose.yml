@@ -1,0 +1,21 @@
+# Kafka-UI: administracion visual de brokers, topicos, particiones y consumer groups (EP5).
+# Archivo SEPARADO del docker-compose del cluster (rubrica EP5: dos docker-compose distintos).
+# Se despliega en la MISMA EC2 que el cluster Kafka; usa network_mode host para llegar a
+# localhost:9092/9093 sin tener que unir redes de dos proyectos docker-compose distintos.
+#   cd infra/kafka-ui && docker compose up -d
+#   Panel: http://<IP>:8089
+
+services:
+  kafka-ui:
+    image: provectuslabs/kafka-ui:v0.7.2
+    container_name: kafka-ui
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      KAFKA_CLUSTERS_0_NAME: campuslab-kafka
+      # Solo bootstrap-servers: Kafka-UI no necesita hablar con Zookeeper directamente para
+      # administrar topicos/particiones/consumer groups (ese acceso es legacy). Zookeeper
+      # queda sin exponer fuera del host (ver infra/kafka-cluster/docker-compose.yml).
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: localhost:9092,localhost:9093
+      SERVER_PORT: 8089
+      AUTH_TYPE: DISABLED

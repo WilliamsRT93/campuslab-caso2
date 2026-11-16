@@ -28,6 +28,8 @@ spring:
       simple:
         acknowledge-mode: manual
         prefetch: 1
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092,localhost:9093}
 
 # Nombres de exchange/colas/routing-keys CENTRALIZADOS (misma topologia que declara
 # ms-campuslab-rabbitmq-admin -- este microservicio NO vuelve a declarar colas/exchanges,
@@ -46,6 +48,10 @@ campuslab:
     topic-exchange: campuslab.eventos
     queue-eventos-reservas: cola-eventos-reservas
     routing-key-evento-reserva: reserva.creada
+  # Topico Kafka de ventas en tiempo real (EP5). Este microservicio es el UNICO productor;
+  # el consumidor (ms-campuslab-reporteria) nunca publica aca -- regla de diseno de EP5.
+  kafka:
+    topico-ventas: campuslab.ventas
 
 management:
   endpoints:
