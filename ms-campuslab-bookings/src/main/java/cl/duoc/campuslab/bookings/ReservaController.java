@@ -85,7 +85,9 @@ public class ReservaController {
                                 "message", "No se puede pasar a EN_USO sin haber APROBADO la reserva"));
                     }
                     reserva.setEstado(request.getStatus());
-                    return ResponseEntity.ok(repository.save(reserva));
+                    Reserva guardada = repository.save(reserva);
+                    eventPublisher.publicarCambioEstado(guardada);
+                    return ResponseEntity.ok(guardada);
                 })
                 .orElse(ResponseEntity.notFound().build());
     }

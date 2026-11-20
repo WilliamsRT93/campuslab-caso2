@@ -140,34 +140,36 @@ export function ReservasPanel({ isAdmin }: Props) {
 
       {error && <p className="error">{error}</p>}
 
-      <table className="tabla">
-        <thead>
-          <tr><th>ID</th><th>Nombre</th><th>RUT</th><th>Fecha</th><th>Producto</th><th>Estado</th><th>Acciones</th></tr>
-        </thead>
-        <tbody>
-          {reservas.map((r) => (
-            <tr key={r.id}>
-              <td>{r.id}</td>
-              <td>{r.nombre}</td>
-              <td>{r.rut}</td>
-              <td>{r.fecha?.replace('T', ' ').slice(0, 16)}</td>
-              <td>{r.productoId}</td>
-              <td>
-                {isAdmin ? (
-                  <select value={r.estado} onChange={(e) => void cambiar(r.id, e.target.value)}>
-                    {ESTADOS.map((s) => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                ) : (
-                  <span className="estado">{r.estado}</span>
-                )}
-              </td>
-              <td className="acciones">
-                <button className="link danger" onClick={() => void eliminar(r.id)}>Eliminar</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="tabla-wrap">
+        <table className="tabla">
+          <thead>
+            <tr><th>ID</th><th>Nombre</th><th>RUT</th><th>Fecha</th><th>Producto</th><th>Estado</th><th>Acciones</th></tr>
+          </thead>
+          <tbody>
+            {reservas.map((r) => (
+              <tr key={r.id}>
+                <td>{r.id}</td>
+                <td>{r.nombre}</td>
+                <td>{r.rut}</td>
+                <td>{r.fecha?.replace('T', ' ').slice(0, 16)}</td>
+                <td>{r.productoId}</td>
+                <td>
+                  {isAdmin ? (
+                    <select value={r.estado} onChange={(e) => void cambiar(r.id, e.target.value)}>
+                      {ESTADOS.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  ) : (
+                    <span className="estado">{r.estado}</span>
+                  )}
+                </td>
+                <td className="acciones">
+                  <button className="link danger" onClick={() => void eliminar(r.id)}>Eliminar</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       {!isAdmin && <p className="hint">El cambio de estado esta reservado a los roles Admin u Operador.</p>}
     </section>
   );

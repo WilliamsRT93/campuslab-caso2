@@ -95,28 +95,30 @@ export function ProductosPanel({ isAdmin }: Props) {
 
       {error && <p className="error">{error}</p>}
 
-      <table className="tabla">
-        <thead>
-          <tr><th>ID</th><th>Nombre</th><th>Tipo</th><th>Stock</th><th>Disponible</th>{isAdmin && <th>Acciones</th>}</tr>
-        </thead>
-        <tbody>
-          {productos.map((p) => (
-            <tr key={p.id}>
-              <td>{p.id}</td>
-              <td>{p.nombre}</td>
-              <td>{p.tipo}</td>
-              <td>{p.stock}</td>
-              <td>{p.disponible ? 'Si' : 'No'}</td>
-              {isAdmin && (
-                <td className="acciones">
-                  <button className="link" onClick={() => editar(p)}>Editar</button>
-                  <button className="link danger" onClick={() => void eliminar(p.id)}>Eliminar</button>
-                </td>
-              )}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="tabla-wrap">
+        <table className="tabla">
+          <thead>
+            <tr><th>ID</th><th>Nombre</th><th>Tipo</th><th>Stock</th><th>Disponible</th>{isAdmin && <th>Acciones</th>}</tr>
+          </thead>
+          <tbody>
+            {productos.map((p) => (
+              <tr key={p.id}>
+                <td>{p.id}</td>
+                <td>{p.nombre}</td>
+                <td>{p.tipo}</td>
+                <td>{p.stock}</td>
+                <td>{p.disponible ? 'Si' : 'No'}</td>
+                {isAdmin && (
+                  <td className="acciones">
+                    <button className="link" onClick={() => editar(p)}>Editar</button>
+                    <button className="link danger" onClick={() => void eliminar(p.id)}>Eliminar</button>
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       {!isAdmin && <p className="hint">Solo el rol Admin puede crear, editar o eliminar productos.</p>}
     </section>
   );

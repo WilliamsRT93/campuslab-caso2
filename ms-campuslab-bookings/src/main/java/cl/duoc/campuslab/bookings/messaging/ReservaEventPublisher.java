@@ -66,6 +66,16 @@ public class ReservaEventPublisher {
         publicarEnKafka(reserva);
     }
 
+    /**
+     * Kafka (EP5): cuando cambia el ESTADO de una reserva ya existente (aprobada, en uso, etc.)
+     * se vuelve a publicar en el mismo topico de ventas para que el panel de reporteria en tiempo
+     * real refleje el estado vigente, no solo la foto del momento en que se creo la reserva.
+     * Solo Kafka -- el cambio de estado no dispara RabbitMQ (eso es exclusivo de la creacion).
+     */
+    public void publicarCambioEstado(Reserva reserva) {
+        publicarEnKafka(reserva);
+    }
+
     /** Kafka (EP5): venta en tiempo real para el panel de reportes de ms-campuslab-reporteria. */
     private void publicarEnKafka(Reserva reserva) {
         VentaEventoDto evento = new VentaEventoDto(reserva.getId(), reserva.getNombre(), reserva.getRut(),

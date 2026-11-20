@@ -129,8 +129,28 @@ input, select {
 .form-actions { margin-top: 16px; display: flex; gap: 10px; }
 .login-directo { display: flex; flex-direction: column; gap: 14px; }
 
+.tabla-wrap { overflow-x: auto; align-self: flex-start; max-width: 100%; }
+.tabla-scroll { max-height: 440px; overflow-y: auto; }
+.tabla-scroll thead th { position: sticky; top: 0; z-index: 1; }
+
+.titulo-panel { margin: 0 0 6px; font-size: 22px; }
+
+.herramientas-prueba {
+  border: 1px dashed rgba(148, 163, 184, 0.3);
+  border-radius: 12px;
+  padding: 4px 16px 16px;
+}
+.herramientas-prueba summary {
+  cursor: pointer;
+  padding: 12px 0;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 600;
+}
+.herramientas-prueba .form-card { margin-top: 14px; }
 .tabla {
-  width: 100%;
+  width: auto;
+  max-width: 100%;
   border-collapse: collapse;
   background: rgba(30, 41, 59, 0.5);
   border-radius: 12px;

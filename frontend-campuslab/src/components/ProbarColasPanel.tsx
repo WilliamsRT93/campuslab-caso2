@@ -107,47 +107,53 @@ export function ProbarColasPanel() {
       {topologia && (
         <>
           <h4 className="sub-h">Exchanges</h4>
-          <table className="tabla">
-            <thead><tr><th>Exchange</th><th>Tipo</th><th>Durable</th><th>Funcion</th></tr></thead>
-            <tbody>
-              {topologia.exchanges.map((e) => (
-                <tr key={e.nombre}><td><code>{e.nombre}</code></td><td>{e.tipo}</td><td>{e.durable ? 'Si' : 'No'}</td><td>{e.funcion}</td></tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="tabla-wrap">
+            <table className="tabla">
+              <thead><tr><th>Exchange</th><th>Tipo</th><th>Durable</th><th>Funcion</th></tr></thead>
+              <tbody>
+                {topologia.exchanges.map((e) => (
+                  <tr key={e.nombre}><td><code>{e.nombre}</code></td><td>{e.tipo}</td><td>{e.durable ? 'Si' : 'No'}</td><td>{e.funcion}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           <h4 className="sub-h">Bindings (exchange <span className="flecha">→</span> routing key <span className="flecha">→</span> cola)</h4>
-          <table className="tabla">
-            <thead><tr><th>Exchange</th><th>Routing key</th><th>Cola destino</th></tr></thead>
-            <tbody>
-              {topologia.bindings.map((b) => (
-                <tr key={`${b.exchange}|${b.routingKey}|${b.cola}`}>
-                  <td><code>{b.exchange}</code></td><td><code>{b.routingKey}</code></td><td><code>{b.cola}</code></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="tabla-wrap">
+            <table className="tabla">
+              <thead><tr><th>Exchange</th><th>Routing key</th><th>Cola destino</th></tr></thead>
+              <tbody>
+                {topologia.bindings.map((b) => (
+                  <tr key={`${b.exchange}|${b.routingKey}|${b.cola}`}>
+                    <td><code>{b.exchange}</code></td><td><code>{b.routingKey}</code></td><td><code>{b.cola}</code></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           <h4 className="sub-h">Colas en vivo</h4>
-          <table className="tabla">
-            <thead>
-              <tr><th>Cola</th><th>Tipo</th><th>En cola</th><th>Consumidores</th><th>Publicados</th><th>Procesados (ACK)</th><th>TTL</th><th>DLX</th></tr>
-            </thead>
-            <tbody>
-              {topologia.colas.map((c) => (
-                <tr key={c.nombre}>
-                  <td><code>{c.nombre}</code></td>
-                  <td><span className={`badge ${c.tipo === 'dlq' ? 'dlq' : 'neg'}`}>{c.tipo === 'dlq' ? 'cola muerta' : 'negocio'}</span></td>
-                  <td>{c.mensajes}</td>
-                  <td className={c.tipo === 'negocio' ? (c.consumidores > 0 ? 'num-ok' : 'num-alerta') : ''}>{c.consumidores}</td>
-                  <td>{c.publicados}</td>
-                  <td>{c.procesados}</td>
-                  <td>{c.ttlMs !== null ? `${c.ttlMs / 1000} s` : '-'}</td>
-                  <td>{c.dlx ? <code>{c.dlx}</code> : '-'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="tabla-wrap">
+            <table className="tabla">
+              <thead>
+                <tr><th>Cola</th><th>Tipo</th><th>En cola</th><th>Consumidores</th><th>Publicados</th><th>Procesados (ACK)</th><th>TTL</th><th>DLX</th></tr>
+              </thead>
+              <tbody>
+                {topologia.colas.map((c) => (
+                  <tr key={c.nombre}>
+                    <td><code>{c.nombre}</code></td>
+                    <td><span className={`badge ${c.tipo === 'dlq' ? 'dlq' : 'neg'}`}>{c.tipo === 'dlq' ? 'cola muerta' : 'negocio'}</span></td>
+                    <td>{c.mensajes}</td>
+                    <td className={c.tipo === 'negocio' ? (c.consumidores > 0 ? 'num-ok' : 'num-alerta') : ''}>{c.consumidores}</td>
+                    <td>{c.publicados}</td>
+                    <td>{c.procesados}</td>
+                    <td>{c.ttlMs !== null ? `${c.ttlMs / 1000} s` : '-'}</td>
+                    <td>{c.dlx ? <code>{c.dlx}</code> : '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           <p className="hint">Ultima lectura: {new Date(topologia.actualizado).toLocaleTimeString()}</p>
         </>
       )}

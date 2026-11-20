@@ -52,6 +52,10 @@ export interface EventoAuditoria {
   recibidoEn: string;
 }
 
+/** Pagina de scroll infinito: "total" es el conteo real en la base; "items" trae hasta 50 filas. */
+export interface PaginaVentas { total: number; items: ReporteVenta[] }
+export interface PaginaAuditoria { total: number; items: EventoAuditoria[] }
+
 /** Topico de Kafka con su configuracion (EP5, lo entrega el administrador de Kafka). */
 export interface TopicoKafka {
   nombre: string;
@@ -165,8 +169,10 @@ export const api = {
     request<ResultadoPublicacion>('POST', '/api/rabbitmq/publicar', p),
 
   // EP5: panel de reporteria/auditoria (ms-campuslab-reporteria, consumidor Kafka)
-  listarVentas: () => request<ReporteVenta[]>('GET', '/api/reporteria/ventas'),
-  listarAuditoriaKafka: () => request<EventoAuditoria[]>('GET', '/api/reporteria/auditoria'),
+  listarVentas: (before?: number) =>
+    request<PaginaVentas>('GET', `/api/reporteria/ventas${before ? `?before=${before}` : ''}`),
+  listarAuditoriaKafka: (before?: number) =>
+    request<PaginaAuditoria>('GET', `/api/reporteria/auditoria${before ? `?before=${before}` : ''}`),
 
   // EP5: administrador de Kafka (ms-campuslab-kafka-admin)
   listarTopicosKafka: () => request<TopicoKafka[]>('GET', '/api/kafka/topics'),

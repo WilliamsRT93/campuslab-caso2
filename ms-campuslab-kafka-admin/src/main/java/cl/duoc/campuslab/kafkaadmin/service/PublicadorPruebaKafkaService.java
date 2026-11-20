@@ -45,7 +45,7 @@ public class PublicadorPruebaKafkaService {
         }
         boolean malformado = "MALFORMADO".equals(request.tipoCaso());
         String payload = malformado ? construirPayloadMalformado(request.topicoLogico())
-                : construirPayloadValido(request.topicoLogico());
+                : construirPayloadValido(request.topicoLogico(), System.nanoTime());
         String clave = UUID.randomUUID().toString();
 
         try {
@@ -86,6 +86,7 @@ public class PublicadorPruebaKafkaService {
 
         int validos = 0;
         int malformados = 0;
+        long semillaBase = System.nanoTime();
         List<CompletableFuture<SendResult<String, String>>> envios = new ArrayList<>(cantidad);
         for (int i = 0; i < cantidad; i++) {
             boolean publicarMalformado = switch (tipoCaso) {
@@ -93,8 +94,10 @@ public class PublicadorPruebaKafkaService {
                 case "MIXTO" -> i % 2 == 1;
                 default -> false;
             };
+            // semillaBase + i: unico por mensaje dentro del burst (cantidad <= 2000 < 100000,
+            // asi que nunca colisiona el modulo usado en construirPayloadValido).
             String payload = publicarMalformado ? construirPayloadMalformado(request.topicoLogico())
-                    : construirPayloadValido(request.topicoLogico());
+                    : construirPayloadValido(request.topicoLogico(), semillaBase + i);
             if (publicarMalformado) {
                 malformados++;
             } else {
@@ -121,18 +124,26 @@ public class PublicadorPruebaKafkaService {
         return new GenerarCargaResponse(config.nombre(), cantidad, validos, malformados, duracionMs, detalle);
     }
 
-    private String construirPayloadValido(String topicoLogico) {
+    /**
+     * idUnico identifica cada mensaje de prueba (reservaId/productoId simulado). Debe ser distinto
+     * en cada llamada -- un burst de miles de mensajes en el mismo milisegundo con
+     * System.currentTimeMillis() generaba IDs repetidos entre filas sin relacion (bug real:
+     * reservas "distintas" con el mismo numero). El llamador pasa System.nanoTime() (+ i en el
+     * burst) para garantizar unicidad.
+     */
+    private String construirPayloadValido(String topicoLogico, long idUnico) {
         Instant ahora = Instant.now();
+        long id = Math.floorMod(idUnico, 100000L);
         if ("ventas".equals(topicoLogico)) {
             return """
                     {"reservaId": %d, "nombre": "Prueba Swagger", "rut": "11111111-1", \
                     "fecha": "%s", "productoId": 1, "estado": "SOLICITADA"}"""
-                    .formatted(System.currentTimeMillis() % 100000, ahora);
+                    .formatted(id, ahora);
         }
         return """
                 {"accion": "CREADO", "productoId": %d, "nombre": "Producto Prueba Swagger", \
                 "tipo": "EQUIPO", "stock": 1, "disponible": true}"""
-                .formatted(System.currentTimeMillis() % 100000);
+                .formatted(id);
     }
 
     /** JSON deliberadamente invalido (falta cerrar llave): el parseo del consumidor debe fallar. */
