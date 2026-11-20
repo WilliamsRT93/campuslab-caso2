@@ -127,6 +127,7 @@ input, select {
 }
 
 .form-actions { margin-top: 16px; display: flex; gap: 10px; }
+.login-directo { display: flex; flex-direction: column; gap: 14px; }
 
 .tabla {
   width: 100%;

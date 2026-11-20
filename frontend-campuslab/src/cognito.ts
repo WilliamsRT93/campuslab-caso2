@@ -80,3 +80,58 @@ export function getCognitoToken(): string | null {
 export function clearCognitoToken(): void {
   sessionStorage.removeItem(TOKEN_KEY);
 }
+
+/** Mensajes en espanol para los codigos de error que devuelve Cognito en InitiateAuth. */
+function mensajeDeErrorCognito(tipo: string, mensajeOriginal: string): string {
+  switch (tipo) {
+    case 'NotAuthorizedException':
+    case 'UserNotFoundException':
+      return 'Usuario o contraseña incorrectos.';
+    case 'UserNotConfirmedException':
+      return 'Esa cuenta existe pero todavia no fue confirmada.';
+    case 'PasswordResetRequiredException':
+      return 'Debes restablecer la contraseña antes de poder iniciar sesion.';
+    case 'TooManyRequestsException':
+    case 'LimitExceededException':
+      return 'Demasiados intentos seguidos. Espera unos segundos e intenta de nuevo.';
+    default:
+      return mensajeOriginal || 'No fue posible iniciar sesion.';
+  }
+}
+
+/**
+ * Login directo usuario/contraseña (sin pasar por el Hosted UI de Cognito): llama a
+ * InitiateAuth (USER_PASSWORD_AUTH) directo desde el navegador -- el App Client es publico,
+ * sin client secret, por lo que esta llamada no requiere firmar con credenciales de AWS.
+ * Permite mostrar el error de "usuario o contraseña incorrectos" dentro de nuestra propia UI
+ * en vez de en la pagina de Cognito.
+ */
+export async function loginDirectoConCredenciales(username: string, password: string): Promise<string> {
+  const region = cognitoConfig.domain.match(/\.auth\.([a-z0-9-]+)\.amazoncognito\.com/)?.[1] ?? 'us-east-1';
+
+  const response = await fetch(`https://cognito-idp.${region}.amazonaws.com/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-amz-json-1.1',
+      'X-Amz-Target': 'AWSCognitoIdentityProviderService.InitiateAuth',
+    },
+    body: JSON.stringify({
+      AuthFlow: 'USER_PASSWORD_AUTH',
+      ClientId: cognitoConfig.clientId,
+      AuthParameters: { USERNAME: username, PASSWORD: password },
+    }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    const tipo = (data.__type as string | undefined)?.split('#').pop() ?? '';
+    throw new Error(mensajeDeErrorCognito(tipo, data.message));
+  }
+
+  const token = data.AuthenticationResult?.AccessToken as string | undefined;
+  if (!token) {
+    throw new Error('Cognito no entrego un token de acceso.');
+  }
+  sessionStorage.setItem(TOKEN_KEY, token);
+  return token;
+}

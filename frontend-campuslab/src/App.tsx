@@ -8,6 +8,7 @@ import {
   clearCognitoToken,
   exchangeCodeForToken,
   getCognitoToken,
+  loginDirectoConCredenciales,
   loginWithCognito,
   logoutFromCognito,
 } from './cognito';
@@ -31,6 +32,11 @@ export default function App() {
   const [identidad, setIdentidad] = useState<Identidad | null>(null);
   const [tab, setTab] = useState<Tab>('productos');
   const [error, setError] = useState<string | null>(null);
+  const [mostrarLoginDirecto, setMostrarLoginDirecto] = useState(false);
+  const [usuarioDirecto, setUsuarioDirecto] = useState('');
+  const [passwordDirecto, setPasswordDirecto] = useState('');
+  const [entrandoDirecto, setEntrandoDirecto] = useState(false);
+  const [errorLoginDirecto, setErrorLoginDirecto] = useState<string | null>(null);
 
   // Procesa el retorno de Cognito (Authorization Code + PKCE) en /cognito-callback.
   useEffect(() => {
@@ -84,7 +90,20 @@ export default function App() {
 
   const cerrarCognito = () => logoutFromCognito();
 
-  // --- Pantalla 1: login con Microsoft (MSAL) ---
+  const entrarDirecto = async () => {
+    setErrorLoginDirecto(null);
+    setEntrandoDirecto(true);
+    try {
+      const token = await loginDirectoConCredenciales(usuarioDirecto.trim(), passwordDirecto);
+      setCognitoToken(token);
+    } catch (e) {
+      setErrorLoginDirecto((e as Error).message);
+    } finally {
+      setEntrandoDirecto(false);
+    }
+  };
+
+  // --- Pantalla 1: login con Microsoft (MSAL) o con usuario/contraseña directo ---
   if (!isAuthenticated && !cognitoToken) {
     return (
       <main className="shell">
@@ -95,12 +114,62 @@ export default function App() {
             Inicia sesion con tu cuenta institucional de Microsoft o con tu usuario y contraseña de
             CampusLab para acceder a la plataforma.
           </p>
-          <button className="btn" onClick={loginMicrosoft} disabled={inProgress !== InteractionStatus.None}>
-            {inProgress !== InteractionStatus.None ? 'Iniciando...' : 'Iniciar sesion con Microsoft'}
-          </button>
-          <button className="btn btn-ghost" onClick={() => void loginWithCognito(true)}>
-            Entrar con usuario y contraseña
-          </button>
+
+          {!mostrarLoginDirecto && (
+            <>
+              <button className="btn" onClick={loginMicrosoft} disabled={inProgress !== InteractionStatus.None}>
+                {inProgress !== InteractionStatus.None ? 'Iniciando...' : 'Iniciar sesion con Microsoft'}
+              </button>
+              <button className="btn btn-ghost" onClick={() => setMostrarLoginDirecto(true)}>
+                Entrar con usuario y contraseña
+              </button>
+            </>
+          )}
+
+          {mostrarLoginDirecto && (
+            <form
+              className="login-directo"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void entrarDirecto();
+              }}
+            >
+              <label>
+                Usuario
+                <input
+                  type="text"
+                  value={usuarioDirecto}
+                  disabled={entrandoDirecto}
+                  autoFocus
+                  onChange={(e) => setUsuarioDirecto(e.target.value)}
+                />
+              </label>
+              <label>
+                Contraseña
+                <input
+                  type="password"
+                  value={passwordDirecto}
+                  disabled={entrandoDirecto}
+                  onChange={(e) => setPasswordDirecto(e.target.value)}
+                />
+              </label>
+              {errorLoginDirecto && <p className="error">{errorLoginDirecto}</p>}
+              <button className="btn" type="submit" disabled={entrandoDirecto || !usuarioDirecto || !passwordDirecto}>
+                {entrandoDirecto ? 'Entrando...' : 'Entrar'}
+              </button>
+              <button
+                className="btn btn-ghost"
+                type="button"
+                disabled={entrandoDirecto}
+                onClick={() => {
+                  setMostrarLoginDirecto(false);
+                  setErrorLoginDirecto(null);
+                }}
+              >
+                Volver
+              </button>
+            </form>
+          )}
         </div>
       </main>
     );
