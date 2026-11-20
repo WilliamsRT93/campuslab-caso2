@@ -45,3 +45,6 @@ export const cognitoConfig = {
 
 /** URL base del API Gateway que enruta hacia el BFF. */
 export const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+
+/** URL directa del panel Kafka-UI (IP elastica de la EC2 de Kafka, puerto 8089; no pasa por el API Gateway). */
+export const kafkaUiUrl = import.meta.env.VITE_KAFKA_UI_URL;

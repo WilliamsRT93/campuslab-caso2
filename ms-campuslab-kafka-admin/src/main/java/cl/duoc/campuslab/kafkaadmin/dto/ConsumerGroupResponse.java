@@ -6,5 +6,7 @@ public record ConsumerGroupResponse(
         String groupId,
         String estado,
         int numeroDeMiembros,
-        List<String> topicosAsignados) {
+        List<String> topicosAsignados,
+        long lagTotal,
+        List<LagParticionResponse> detalleLag) {
 }

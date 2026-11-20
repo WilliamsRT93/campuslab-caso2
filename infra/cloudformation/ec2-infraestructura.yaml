@@ -1,0 +1,100 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Infraestructura EC2 + IP elastica de CampusLab como codigo (EP5). Este stack se crea
+  por IMPORTACION de las 3 instancias y sus 3 Elastic IP ya existentes y en uso
+  (campuslab-ec2, campuslab-rabbitmq, campuslab-kafka) -- no las recrea, no cambia sus
+  IPs ni interrumpe el servicio. A partir de este stack, cualquier cambio de
+  infraestructura (tipo de instancia, SG, etc.) se gestiona con CloudFormation en vez
+  de la consola. Cada instancia tiene DeletionPolicy/UpdateReplacePolicy en Retain:
+  borrar o reemplazar el stack nunca termina la EC2 ni libera la IP elastica.
+
+Resources:
+
+  CampusLabAppEc2:
+    Type: AWS::EC2::Instance
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      ImageId: ami-081b0a6eac00b4f53
+      InstanceType: t3.medium
+      SubnetId: subnet-00889dd25ded1a74b
+      SecurityGroupIds:
+        - sg-0b4b405c07390ec6a
+      KeyName: campuslab-key
+      Tags:
+        - Key: Name
+          Value: campuslab-ec2
+
+  CampusLabRabbitMqEc2:
+    Type: AWS::EC2::Instance
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      ImageId: ami-0856027a77429315a
+      InstanceType: t3.medium
+      SubnetId: subnet-00889dd25ded1a74b
+      SecurityGroupIds:
+        - sg-01e600e4276150085
+      KeyName: campuslab-rabbitmq-key
+      Tags:
+        - Key: Name
+          Value: campuslab-rabbitmq
+
+  CampusLabKafkaEc2:
+    Type: AWS::EC2::Instance
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      ImageId: ami-0856027a77429315a
+      InstanceType: t3.medium
+      SubnetId: subnet-00889dd25ded1a74b
+      SecurityGroupIds:
+        - sg-0dc027b376fd45af9
+      KeyName: campuslab-rabbitmq-key
+      Tags:
+        - Key: Name
+          Value: campuslab-kafka
+
+  CampusLabAppEip:
+    Type: AWS::EC2::EIP
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Domain: vpc
+      InstanceId: !Ref CampusLabAppEc2
+      Tags:
+        - Key: Name
+          Value: campuslab-ec2-eip
+
+  CampusLabRabbitMqEip:
+    Type: AWS::EC2::EIP
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Domain: vpc
+      InstanceId: !Ref CampusLabRabbitMqEc2
+      Tags:
+        - Key: Name
+          Value: campuslab-rabbitmq-eip
+
+  CampusLabKafkaEip:
+    Type: AWS::EC2::EIP
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Domain: vpc
+      InstanceId: !Ref CampusLabKafkaEc2
+      Tags:
+        - Key: Name
+          Value: campuslab-kafka-eip
+
+Outputs:
+  AppPublicIp:
+    Description: IP elastica del BFF/bookings/catalog/frontend
+    Value: !Ref CampusLabAppEip
+  RabbitMqPublicIp:
+    Description: IP elastica del administrador RabbitMQ
+    Value: !Ref CampusLabRabbitMqEip
+  KafkaPublicIp:
+    Description: IP elastica del cluster Kafka/kafka-admin/reporteria/kafka-ui
+    Value: !Ref CampusLabKafkaEip

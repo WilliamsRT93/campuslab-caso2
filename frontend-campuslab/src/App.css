@@ -171,6 +171,8 @@ input, select {
 .badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; background: rgba(148, 163, 184, 0.18); }
 .badge.neg { background: rgba(59, 130, 246, 0.2); color: #93c5fd; }
 .badge.dlq { background: rgba(248, 113, 113, 0.18); color: #fca5a5; }
+.lag-detalle { list-style: none; margin: 4px 0 0; padding: 0; font-size: 11px; color: #94a3b8; }
+.lag-detalle li { line-height: 1.5; }
 .num-alerta { color: #f87171; font-weight: 600; }
 .num-ok { color: #4ade80; font-weight: 600; }
 .fila-form { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }

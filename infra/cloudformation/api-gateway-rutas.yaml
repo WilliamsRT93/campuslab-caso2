@@ -418,6 +418,24 @@ Resources:
       AuthorizerId: !Ref CognitoJwtAuthorizer
       Target: !Join ['/', ['integrations', !Ref IntKafkaPrueba]]
 
+  IntKafkaCarga:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      PayloadFormatVersion: '1.0'
+      IntegrationUri: !Sub '${KafkaAdminBaseUrl}/api/kafka/prueba/carga'
+
+  RouteKafkaCargaPost:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref CampusLabHttpApi
+      RouteKey: POST /api/kafka/prueba/carga
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoJwtAuthorizer
+      Target: !Join ['/', ['integrations', !Ref IntKafkaCarga]]
+
   # ---------------- EP5: panel de reporteria/auditoria (front -> ms-campuslab-reporteria) ----------------
   IntReporteriaVentas:
     Type: AWS::ApiGatewayV2::Integration

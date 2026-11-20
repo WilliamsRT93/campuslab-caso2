@@ -3,12 +3,14 @@ package cl.duoc.campuslab.kafkaadmin.service;
 import cl.duoc.campuslab.kafkaadmin.dto.ActualizarConfigTopicoRequest;
 import cl.duoc.campuslab.kafkaadmin.dto.ConsumerGroupResponse;
 import cl.duoc.campuslab.kafkaadmin.dto.CrearTopicoRequest;
+import cl.duoc.campuslab.kafkaadmin.dto.LagParticionResponse;
 import cl.duoc.campuslab.kafkaadmin.dto.TopicoResponse;
 import cl.duoc.campuslab.kafkaadmin.exception.RecursoExistenteException;
 import cl.duoc.campuslab.kafkaadmin.exception.RecursoNoEncontradoException;
 import cl.duoc.campuslab.kafkaadmin.exception.SolicitudInvalidaException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -20,11 +22,15 @@ import org.apache.kafka.clients.admin.Config;
 import org.apache.kafka.clients.admin.ConfigEntry;
 import org.apache.kafka.clients.admin.ConsumerGroupDescription;
 import org.apache.kafka.clients.admin.ConsumerGroupListing;
+import org.apache.kafka.clients.admin.ListOffsetsResult;
 import org.apache.kafka.clients.admin.NewPartitions;
 import org.apache.kafka.clients.admin.NewTopic;
+import org.apache.kafka.clients.admin.OffsetSpec;
 import org.apache.kafka.clients.admin.TopicDescription;
 import org.apache.kafka.clients.admin.TopicListing;
+import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.KafkaFuture;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.TopicPartitionInfo;
 import org.apache.kafka.common.config.ConfigResource;
 import org.apache.kafka.common.errors.TopicExistsException;
@@ -150,8 +156,41 @@ public class KafkaAdminService {
                 .map(tp -> tp.topic())
                 .distinct()
                 .toList();
+        List<LagParticionResponse> detalleLag = calcularLag(descripcion.groupId());
+        long lagTotal = detalleLag.stream().mapToLong(LagParticionResponse::lag).sum();
         return new ConsumerGroupResponse(descripcion.groupId(), descripcion.state().toString(),
-                descripcion.members().size(), topicos);
+                descripcion.members().size(), topicos, lagTotal, detalleLag);
+    }
+
+    /**
+     * Lag por particion = offset final del topico (ultimo mensaje producido) menos el offset
+     * comprometido por el consumer group (ultimo mensaje procesado). Se usa para los botones de
+     * prueba de carga del frontend: tras publicar un burst de mensajes el lag debe subir y luego
+     * volver a 0 cuando ms-campuslab-reporteria los consume.
+     */
+    private List<LagParticionResponse> calcularLag(String groupId) {
+        Map<TopicPartition, OffsetAndMetadata> comprometidos =
+                ejecutarConValor(adminClient.listConsumerGroupOffsets(groupId).partitionsToOffsetAndMetadata());
+        if (comprometidos.isEmpty()) {
+            return List.of();
+        }
+        Map<TopicPartition, OffsetSpec> solicitudFinal = comprometidos.keySet().stream()
+                .collect(Collectors.toMap(tp -> tp, tp -> OffsetSpec.latest()));
+        Map<TopicPartition, ListOffsetsResult.ListOffsetsResultInfo> finales =
+                ejecutarConValor(adminClient.listOffsets(solicitudFinal).all());
+
+        List<LagParticionResponse> resultado = new ArrayList<>();
+        for (Map.Entry<TopicPartition, OffsetAndMetadata> entry : comprometidos.entrySet()) {
+            TopicPartition tp = entry.getKey();
+            long offsetComprometido = entry.getValue() == null ? 0 : entry.getValue().offset();
+            ListOffsetsResult.ListOffsetsResultInfo info = finales.get(tp);
+            long offsetFinal = info == null ? offsetComprometido : info.offset();
+            long lag = Math.max(0, offsetFinal - offsetComprometido);
+            resultado.add(new LagParticionResponse(tp.topic(), tp.partition(), offsetComprometido, offsetFinal, lag));
+        }
+        resultado.sort(Comparator.comparing(LagParticionResponse::topico)
+                .thenComparingInt(LagParticionResponse::particion));
+        return resultado;
     }
 
     private List<TopicoResponse> describirTopicos(List<String> nombres) {

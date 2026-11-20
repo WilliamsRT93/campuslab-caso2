@@ -1,5 +1,7 @@
 package cl.duoc.campuslab.kafkaadmin.controller;
 
+import cl.duoc.campuslab.kafkaadmin.dto.GenerarCargaRequest;
+import cl.duoc.campuslab.kafkaadmin.dto.GenerarCargaResponse;
 import cl.duoc.campuslab.kafkaadmin.dto.PublicarPruebaKafkaRequest;
 import cl.duoc.campuslab.kafkaadmin.dto.PublicarPruebaKafkaResponse;
 import cl.duoc.campuslab.kafkaadmin.service.PublicadorPruebaKafkaService;
@@ -54,5 +56,24 @@ public class PruebaMensajeriaKafkaController {
             }))
             PublicarPruebaKafkaRequest request) {
         return publicador.publicar(request);
+    }
+
+    @Operation(summary = "Generar una carga configurable de mensajes para forzar consumer lag",
+            description = "Publica 'cantidadMensajes' eventos validos EN BURST en el topico logico elegido "
+                    + "(ventas o auditoria), sin esperar la confirmacion de cada uno antes de enviar el "
+                    + "siguiente. Usado por el boton 'Generar carga' del panel de reporteria para que el "
+                    + "consumer lag suba de forma visible y luego vuelva a 0 a medida que "
+                    + "ms-campuslab-reporteria los procesa.")
+    @PostMapping(value = "/carga", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public GenerarCargaResponse generarCarga(
+            @Valid @org.springframework.web.bind.annotation.RequestBody
+            @RequestBody(content = @Content(examples = {
+                    @ExampleObject(name = "Carga de 200 mensajes en ventas",
+                            value = "{\"topicoLogico\": \"ventas\", \"cantidadMensajes\": 200}"),
+                    @ExampleObject(name = "Carga de 500 mensajes en auditoria",
+                            value = "{\"topicoLogico\": \"auditoria\", \"cantidadMensajes\": 500}")
+            }))
+            GenerarCargaRequest request) {
+        return publicador.generarCarga(request);
     }
 }

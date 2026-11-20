@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../api';
+import { kafkaUiUrl } from '../authConfig';
 import type { ConsumerGroupKafka, EventoAuditoria, ReporteVenta, TopicoKafka } from '../api';
 
 type Resultado = { ok: boolean; mensaje: string };
@@ -19,6 +20,10 @@ export function ReporteriaPanel() {
   const [error, setError] = useState<string | null>(null);
   const [probando, setProbando] = useState<string | null>(null);
   const [resultado, setResultado] = useState<Resultado | null>(null);
+  const [cargaTopico, setCargaTopico] = useState<'ventas' | 'auditoria'>('ventas');
+  const [cargaCantidad, setCargaCantidad] = useState(200);
+  const [generandoCarga, setGenerandoCarga] = useState(false);
+  const [resultadoCarga, setResultadoCarga] = useState<Resultado | null>(null);
 
   const cargar = useCallback(() => {
     api.listarVentas().then(setVentas).catch((e: Error) => setError(e.message));
@@ -48,6 +53,20 @@ export function ReporteriaPanel() {
     }
   };
 
+  const generarCarga = async () => {
+    setResultadoCarga(null);
+    setGenerandoCarga(true);
+    try {
+      const r = await api.generarCargaKafka({ topicoLogico: cargaTopico, cantidadMensajes: cargaCantidad });
+      setResultadoCarga({ ok: true, mensaje: r.detalle });
+      setTimeout(cargar, 2000);
+    } catch (e) {
+      setResultadoCarga({ ok: false, mensaje: (e as Error).message });
+    } finally {
+      setGenerandoCarga(false);
+    }
+  };
+
   return (
     <section className="panel">
       <div className="form-card">
@@ -74,6 +93,39 @@ export function ReporteriaPanel() {
           </button>
         </div>
         {resultado && <p className={resultado.ok ? 'hint dlq-ok' : 'error'}>{resultado.mensaje}</p>}
+      </div>
+
+      <div className="form-card">
+        <h3>Prueba de carga (consumer lag)</h3>
+        <p className="hint">
+          Publica varios mensajes validos EN BURST en el topico elegido, sin esperar la confirmacion de
+          cada uno. El <strong>consumer lag</strong> (pestaña "Topicos y consumer groups") debe subir de
+          forma visible y volver a 0 segundos despues, a medida que <code>ms-campuslab-reporteria</code> los
+          procesa.
+        </p>
+        <div className="form-actions">
+          <select
+            value={cargaTopico}
+            disabled={generandoCarga}
+            onChange={(e) => setCargaTopico(e.target.value as 'ventas' | 'auditoria')}
+          >
+            <option value="ventas">Topico: ventas</option>
+            <option value="auditoria">Topico: auditoria</option>
+          </select>
+          <input
+            type="number"
+            min={1}
+            max={2000}
+            value={cargaCantidad}
+            disabled={generandoCarga}
+            onChange={(e) => setCargaCantidad(Number(e.target.value))}
+            aria-label="Cantidad de mensajes"
+          />
+          <button className="btn" disabled={generandoCarga} onClick={() => void generarCarga()}>
+            {generandoCarga ? 'Generando...' : `Generar carga (${cargaCantidad} msjs)`}
+          </button>
+        </div>
+        {resultadoCarga && <p className={resultadoCarga.ok ? 'hint dlq-ok' : 'error'}>{resultadoCarga.mensaje}</p>}
       </div>
 
       <nav className="tabs">
@@ -144,6 +196,14 @@ export function ReporteriaPanel() {
 
       {subTab === 'topologia' && (
         <>
+          {kafkaUiUrl && (
+            <p className="hint">
+              <a className="btn btn-ghost" href={kafkaUiUrl} target="_blank" rel="noopener noreferrer">
+                Abrir Kafka-UI ↗
+              </a>{' '}
+              para inspeccionar brokers, particiones y mensajes directamente.
+            </p>
+          )}
           <h4 className="sub-h">Topicos</h4>
           <table className="tabla">
             <thead>
@@ -171,7 +231,10 @@ export function ReporteriaPanel() {
           <h4 className="sub-h">Consumer groups</h4>
           <table className="tabla">
             <thead>
-              <tr><th>Group ID</th><th>Estado</th><th>Miembros</th><th>Topicos asignados</th></tr>
+              <tr>
+                <th>Group ID</th><th>Estado</th><th>Miembros</th><th>Topicos asignados</th>
+                <th>Consumer lag</th>
+              </tr>
             </thead>
             <tbody>
               {grupos.map((g) => (
@@ -180,10 +243,22 @@ export function ReporteriaPanel() {
                   <td>{g.estado}</td>
                   <td>{g.numeroDeMiembros}</td>
                   <td>{g.topicosAsignados.join(', ') || '—'}</td>
+                  <td>
+                    <span className={g.lagTotal > 0 ? 'badge dlq' : 'badge'}>{g.lagTotal}</span>
+                    {g.detalleLag.length > 0 && (
+                      <ul className="lag-detalle">
+                        {g.detalleLag.map((l) => (
+                          <li key={`${l.topico}-${l.particion}`}>
+                            {l.topico}[{l.particion}]: {l.offsetComprometido}/{l.offsetFinal} (lag {l.lag})
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </td>
                 </tr>
               ))}
               {grupos.length === 0 && (
-                <tr><td colSpan={4} className="hint">Sin consumer groups activos todavia.</td></tr>
+                <tr><td colSpan={5} className="hint">Sin consumer groups activos todavia.</td></tr>
               )}
             </tbody>
           </table>

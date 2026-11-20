@@ -1,6 +1,7 @@
 package cl.duoc.campuslab.kafkaadmin.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
@@ -8,6 +9,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import cl.duoc.campuslab.kafkaadmin.config.KafkaAdminProperties;
+import cl.duoc.campuslab.kafkaadmin.dto.GenerarCargaRequest;
+import cl.duoc.campuslab.kafkaadmin.dto.GenerarCargaResponse;
 import cl.duoc.campuslab.kafkaadmin.dto.PublicarPruebaKafkaRequest;
 import cl.duoc.campuslab.kafkaadmin.dto.PublicarPruebaKafkaResponse;
 import java.util.Map;
@@ -72,5 +75,26 @@ class PublicadorPruebaKafkaServiceTest {
         service.publicar(new PublicarPruebaKafkaRequest("ventas", "VALIDO"));
 
         org.mockito.Mockito.verify(kafkaTemplate).send(eq("campuslab.ventas"), any(), argThat((String p) -> p.contains("reservaId")));
+    }
+
+    @Test
+    void generaCargaPublicandoLaCantidadDeMensajesPedida() {
+        KafkaTemplate<String, String> kafkaTemplate = kafkaTemplateQueResponde("campuslab.ventas");
+        PublicadorPruebaKafkaService service = new PublicadorPruebaKafkaService(kafkaTemplate, PROPS);
+
+        GenerarCargaResponse respuesta = service.generarCarga(new GenerarCargaRequest("ventas", 10));
+
+        assertThat(respuesta.topico()).isEqualTo("campuslab.ventas");
+        assertThat(respuesta.mensajesPublicados()).isEqualTo(10);
+        org.mockito.Mockito.verify(kafkaTemplate, org.mockito.Mockito.times(10)).send(eq("campuslab.ventas"), any(), any());
+    }
+
+    @Test
+    void generarCargaConTopicoLogicoDesconocidoLanzaSolicitudInvalida() {
+        KafkaTemplate<String, String> kafkaTemplate = kafkaTemplateQueResponde("campuslab.ventas");
+        PublicadorPruebaKafkaService service = new PublicadorPruebaKafkaService(kafkaTemplate, new KafkaAdminProperties(Map.of(), ".dlt"));
+
+        assertThatThrownBy(() -> service.generarCarga(new GenerarCargaRequest("ventas", 10)))
+                .isInstanceOf(cl.duoc.campuslab.kafkaadmin.exception.SolicitudInvalidaException.class);
     }
 }

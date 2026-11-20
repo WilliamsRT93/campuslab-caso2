@@ -60,12 +60,23 @@ export interface TopicoKafka {
   configuracion: Record<string, string>;
 }
 
-/** Consumer group de Kafka con sus topicos asignados (EP5). */
+/** Lag de una particion puntual: offset final del topico vs. offset comprometido por el grupo (EP5). */
+export interface LagParticionKafka {
+  topico: string;
+  particion: number;
+  offsetComprometido: number;
+  offsetFinal: number;
+  lag: number;
+}
+
+/** Consumer group de Kafka con sus topicos asignados y su consumer lag (EP5). */
 export interface ConsumerGroupKafka {
   groupId: string;
   estado: string;
   numeroDeMiembros: number;
   topicosAsignados: string[];
+  lagTotal: number;
+  detalleLag: LagParticionKafka[];
 }
 
 /** Topologia en vivo de RabbitMQ (la entrega el administrador de RabbitMQ, solo rol Admin). */
@@ -105,6 +116,14 @@ export interface ResultadoPruebaKafka {
   payloadEnviado: string;
   particion: number;
   offset: number;
+  detalle: string;
+}
+
+/** Resultado de generar una carga configurable de mensajes para forzar consumer lag (EP5). */
+export interface ResultadoCargaKafka {
+  topico: string;
+  mensajesPublicados: number;
+  duracionMs: number;
   detalle: string;
 }
 
@@ -152,6 +171,8 @@ export const api = {
   listarConsumerGroupsKafka: () => request<ConsumerGroupKafka[]>('GET', '/api/kafka/consumer-groups'),
   publicarPruebaKafka: (p: { topicoLogico: 'ventas' | 'auditoria'; tipoCaso: 'VALIDO' | 'MALFORMADO' }) =>
     request<ResultadoPruebaKafka>('POST', '/api/kafka/prueba/publicar', p),
+  generarCargaKafka: (p: { topicoLogico: 'ventas' | 'auditoria'; cantidadMensajes: number }) =>
+    request<ResultadoCargaKafka>('POST', '/api/kafka/prueba/carga', p),
 
   listarProductos: () => request<Producto[]>('GET', '/api/catalog/resources'),
   crearProducto: (p: Omit<Producto, 'id'>) => request<Producto>('POST', '/api/catalog/resources', p),
