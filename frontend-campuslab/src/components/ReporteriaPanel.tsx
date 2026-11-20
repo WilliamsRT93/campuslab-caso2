@@ -22,6 +22,7 @@ export function ReporteriaPanel() {
   const [resultado, setResultado] = useState<Resultado | null>(null);
   const [cargaTopico, setCargaTopico] = useState<'ventas' | 'auditoria'>('ventas');
   const [cargaCantidad, setCargaCantidad] = useState(200);
+  const [cargaTipo, setCargaTipo] = useState<'VALIDO' | 'MALFORMADO' | 'MIXTO'>('VALIDO');
   const [generandoCarga, setGenerandoCarga] = useState(false);
   const [resultadoCarga, setResultadoCarga] = useState<Resultado | null>(null);
 
@@ -57,7 +58,11 @@ export function ReporteriaPanel() {
     setResultadoCarga(null);
     setGenerandoCarga(true);
     try {
-      const r = await api.generarCargaKafka({ topicoLogico: cargaTopico, cantidadMensajes: cargaCantidad });
+      const r = await api.generarCargaKafka({
+        topicoLogico: cargaTopico,
+        cantidadMensajes: cargaCantidad,
+        tipoCaso: cargaTipo,
+      });
       setResultadoCarga({ ok: true, mensaje: r.detalle });
       setTimeout(cargar, 2000);
     } catch (e) {
@@ -98,10 +103,10 @@ export function ReporteriaPanel() {
       <div className="form-card">
         <h3>Prueba de carga (consumer lag)</h3>
         <p className="hint">
-          Publica varios mensajes validos EN BURST en el topico elegido, sin esperar la confirmacion de
-          cada uno. El <strong>consumer lag</strong> (pestaña "Topicos y consumer groups") debe subir de
-          forma visible y volver a 0 segundos despues, a medida que <code>ms-campuslab-reporteria</code> los
-          procesa.
+          Publica varios mensajes EN BURST en el topico elegido, sin esperar la confirmacion de cada uno.
+          Elija la mezcla: solo validos, solo malformados (todos a la DLT) o mixto (mitad y mitad). El{' '}
+          <strong>consumer lag</strong> (pestaña "Topicos y consumer groups") debe subir de forma visible y
+          volver a 0 segundos despues, a medida que <code>ms-campuslab-reporteria</code> los procesa.
         </p>
         <div className="form-actions">
           <select
@@ -111,6 +116,15 @@ export function ReporteriaPanel() {
           >
             <option value="ventas">Topico: ventas</option>
             <option value="auditoria">Topico: auditoria</option>
+          </select>
+          <select
+            value={cargaTipo}
+            disabled={generandoCarga}
+            onChange={(e) => setCargaTipo(e.target.value as 'VALIDO' | 'MALFORMADO' | 'MIXTO')}
+          >
+            <option value="VALIDO">Solo buenas (validas)</option>
+            <option value="MALFORMADO">Solo malas (-&gt; DLT)</option>
+            <option value="MIXTO">Mixto (mitad y mitad)</option>
           </select>
           <input
             type="number"

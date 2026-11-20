@@ -59,19 +59,22 @@ public class PruebaMensajeriaKafkaController {
     }
 
     @Operation(summary = "Generar una carga configurable de mensajes para forzar consumer lag",
-            description = "Publica 'cantidadMensajes' eventos validos EN BURST en el topico logico elegido "
-                    + "(ventas o auditoria), sin esperar la confirmacion de cada uno antes de enviar el "
-                    + "siguiente. Usado por el boton 'Generar carga' del panel de reporteria para que el "
-                    + "consumer lag suba de forma visible y luego vuelva a 0 a medida que "
-                    + "ms-campuslab-reporteria los procesa.")
+            description = "Publica 'cantidadMensajes' eventos EN BURST en el topico logico elegido (ventas o "
+                    + "auditoria), sin esperar la confirmacion de cada uno antes de enviar el siguiente. "
+                    + "'tipoCaso' elige la mezcla: VALIDO (todos validos), MALFORMADO (todos terminan en el "
+                    + "topico .dlt) o MIXTO (mitad validos, mitad malformados, alternados). Usado por el boton "
+                    + "'Generar carga' del panel de reporteria para que el consumer lag suba de forma visible "
+                    + "y luego vuelva a 0 a medida que ms-campuslab-reporteria los procesa.")
     @PostMapping(value = "/carga", consumes = MediaType.APPLICATION_JSON_VALUE)
     public GenerarCargaResponse generarCarga(
             @Valid @org.springframework.web.bind.annotation.RequestBody
             @RequestBody(content = @Content(examples = {
-                    @ExampleObject(name = "Carga de 200 mensajes en ventas",
-                            value = "{\"topicoLogico\": \"ventas\", \"cantidadMensajes\": 200}"),
-                    @ExampleObject(name = "Carga de 500 mensajes en auditoria",
-                            value = "{\"topicoLogico\": \"auditoria\", \"cantidadMensajes\": 500}")
+                    @ExampleObject(name = "200 mensajes validos en ventas",
+                            value = "{\"topicoLogico\": \"ventas\", \"cantidadMensajes\": 200, \"tipoCaso\": \"VALIDO\"}"),
+                    @ExampleObject(name = "200 mensajes malformados en ventas -> todos a la DLT",
+                            value = "{\"topicoLogico\": \"ventas\", \"cantidadMensajes\": 200, \"tipoCaso\": \"MALFORMADO\"}"),
+                    @ExampleObject(name = "500 mensajes mixtos en auditoria (mitad validos, mitad a la DLT)",
+                            value = "{\"topicoLogico\": \"auditoria\", \"cantidadMensajes\": 500, \"tipoCaso\": \"MIXTO\"}")
             }))
             GenerarCargaRequest request) {
         return publicador.generarCarga(request);

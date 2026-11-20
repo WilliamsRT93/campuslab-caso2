@@ -78,15 +78,41 @@ class PublicadorPruebaKafkaServiceTest {
     }
 
     @Test
-    void generaCargaPublicandoLaCantidadDeMensajesPedida() {
+    void generaCargaSoloValidaPublicandoLaCantidadDeMensajesPedida() {
         KafkaTemplate<String, String> kafkaTemplate = kafkaTemplateQueResponde("campuslab.ventas");
         PublicadorPruebaKafkaService service = new PublicadorPruebaKafkaService(kafkaTemplate, PROPS);
 
-        GenerarCargaResponse respuesta = service.generarCarga(new GenerarCargaRequest("ventas", 10));
+        GenerarCargaResponse respuesta = service.generarCarga(new GenerarCargaRequest("ventas", 10, "VALIDO"));
 
         assertThat(respuesta.topico()).isEqualTo("campuslab.ventas");
         assertThat(respuesta.mensajesPublicados()).isEqualTo(10);
+        assertThat(respuesta.validos()).isEqualTo(10);
+        assertThat(respuesta.malformados()).isEqualTo(0);
         org.mockito.Mockito.verify(kafkaTemplate, org.mockito.Mockito.times(10)).send(eq("campuslab.ventas"), any(), any());
+    }
+
+    @Test
+    void generaCargaSoloMalformadaSinMensajesValidos() {
+        KafkaTemplate<String, String> kafkaTemplate = kafkaTemplateQueResponde("campuslab.ventas");
+        PublicadorPruebaKafkaService service = new PublicadorPruebaKafkaService(kafkaTemplate, PROPS);
+
+        GenerarCargaResponse respuesta = service.generarCarga(new GenerarCargaRequest("ventas", 10, "MALFORMADO"));
+
+        assertThat(respuesta.validos()).isEqualTo(0);
+        assertThat(respuesta.malformados()).isEqualTo(10);
+        assertThat(respuesta.detalle()).contains(".dlt");
+    }
+
+    @Test
+    void generaCargaMixtaConMitadValidosYMitadMalformados() {
+        KafkaTemplate<String, String> kafkaTemplate = kafkaTemplateQueResponde("campuslab.ventas");
+        PublicadorPruebaKafkaService service = new PublicadorPruebaKafkaService(kafkaTemplate, PROPS);
+
+        GenerarCargaResponse respuesta = service.generarCarga(new GenerarCargaRequest("ventas", 10, "MIXTO"));
+
+        assertThat(respuesta.mensajesPublicados()).isEqualTo(10);
+        assertThat(respuesta.validos()).isEqualTo(5);
+        assertThat(respuesta.malformados()).isEqualTo(5);
     }
 
     @Test
@@ -94,7 +120,7 @@ class PublicadorPruebaKafkaServiceTest {
         KafkaTemplate<String, String> kafkaTemplate = kafkaTemplateQueResponde("campuslab.ventas");
         PublicadorPruebaKafkaService service = new PublicadorPruebaKafkaService(kafkaTemplate, new KafkaAdminProperties(Map.of(), ".dlt"));
 
-        assertThatThrownBy(() -> service.generarCarga(new GenerarCargaRequest("ventas", 10)))
+        assertThatThrownBy(() -> service.generarCarga(new GenerarCargaRequest("ventas", 10, "VALIDO")))
                 .isInstanceOf(cl.duoc.campuslab.kafkaadmin.exception.SolicitudInvalidaException.class);
     }
 }

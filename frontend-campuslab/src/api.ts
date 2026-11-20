@@ -123,6 +123,8 @@ export interface ResultadoPruebaKafka {
 export interface ResultadoCargaKafka {
   topico: string;
   mensajesPublicados: number;
+  validos: number;
+  malformados: number;
   duracionMs: number;
   detalle: string;
 }
@@ -171,8 +173,11 @@ export const api = {
   listarConsumerGroupsKafka: () => request<ConsumerGroupKafka[]>('GET', '/api/kafka/consumer-groups'),
   publicarPruebaKafka: (p: { topicoLogico: 'ventas' | 'auditoria'; tipoCaso: 'VALIDO' | 'MALFORMADO' }) =>
     request<ResultadoPruebaKafka>('POST', '/api/kafka/prueba/publicar', p),
-  generarCargaKafka: (p: { topicoLogico: 'ventas' | 'auditoria'; cantidadMensajes: number }) =>
-    request<ResultadoCargaKafka>('POST', '/api/kafka/prueba/carga', p),
+  generarCargaKafka: (p: {
+    topicoLogico: 'ventas' | 'auditoria';
+    cantidadMensajes: number;
+    tipoCaso: 'VALIDO' | 'MALFORMADO' | 'MIXTO';
+  }) => request<ResultadoCargaKafka>('POST', '/api/kafka/prueba/carga', p),
 
   listarProductos: () => request<Producto[]>('GET', '/api/catalog/resources'),
   crearProducto: (p: Omit<Producto, 'id'>) => request<Producto>('POST', '/api/catalog/resources', p),

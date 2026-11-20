@@ -69,10 +69,11 @@ public class PublicadorPruebaKafkaService {
 
     /**
      * Prueba de carga configurable (EP5, boton "Generar carga" del frontend): publica
-     * "cantidadMensajes" eventos validos EN BURST (sin esperar la confirmacion de cada uno antes
-     * de enviar el siguiente) para que el consumer lag suba de forma visible en
+     * "cantidadMensajes" eventos EN BURST (sin esperar la confirmacion de cada uno antes de
+     * enviar el siguiente) para que el consumer lag suba de forma visible en
      * GET /api/kafka/consumer-groups mientras ms-campuslab-reporteria los procesa, y vuelva a 0
-     * segundos despues.
+     * segundos despues. "tipoCaso" elige la mezcla: VALIDO (todos validos), MALFORMADO (todos
+     * terminan en el topico .dlt) o MIXTO (alterna uno y uno, mitad validos/mitad malformados).
      */
     public GenerarCargaResponse generarCarga(GenerarCargaRequest request) {
         KafkaAdminProperties.TopicoConfig config = props.configPara(request.topicoLogico());
@@ -80,11 +81,25 @@ public class PublicadorPruebaKafkaService {
             throw new SolicitudInvalidaException("No hay un topico configurado para '" + request.topicoLogico() + "'");
         }
         int cantidad = request.cantidadMensajes();
+        String tipoCaso = request.tipoCaso() == null ? "VALIDO" : request.tipoCaso();
         long inicio = System.currentTimeMillis();
 
+        int validos = 0;
+        int malformados = 0;
         List<CompletableFuture<SendResult<String, String>>> envios = new ArrayList<>(cantidad);
         for (int i = 0; i < cantidad; i++) {
-            String payload = construirPayloadValido(request.topicoLogico());
+            boolean publicarMalformado = switch (tipoCaso) {
+                case "MALFORMADO" -> true;
+                case "MIXTO" -> i % 2 == 1;
+                default -> false;
+            };
+            String payload = publicarMalformado ? construirPayloadMalformado(request.topicoLogico())
+                    : construirPayloadValido(request.topicoLogico());
+            if (publicarMalformado) {
+                malformados++;
+            } else {
+                validos++;
+            }
             envios.add(kafkaTemplate.send(config.nombre(), UUID.randomUUID().toString(), payload));
         }
 
@@ -99,10 +114,11 @@ public class PublicadorPruebaKafkaService {
         }
 
         long duracionMs = System.currentTimeMillis() - inicio;
-        String detalle = "Se publicaron " + cantidad + " mensajes validos en '" + config.nombre() + "' en "
-                + duracionMs + " ms. Revise el consumer lag en el panel de topologia: debe subir y luego "
-                + "volver a 0 a medida que ms-campuslab-reporteria los procesa.";
-        return new GenerarCargaResponse(config.nombre(), cantidad, duracionMs, detalle);
+        String detalle = "Se publicaron " + cantidad + " mensajes en '" + config.nombre() + "' (" + validos
+                + " validos, " + malformados + " malformados) en " + duracionMs + " ms. Revise el consumer lag "
+                + "en el panel de topologia: debe subir y luego volver a 0 a medida que ms-campuslab-reporteria "
+                + "los procesa; los malformados deben terminar en '" + config.nombre() + ".dlt'.";
+        return new GenerarCargaResponse(config.nombre(), cantidad, validos, malformados, duracionMs, detalle);
     }
 
     private String construirPayloadValido(String topicoLogico) {
