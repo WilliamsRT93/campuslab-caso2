@@ -21,10 +21,10 @@ import org.springframework.util.backoff.FixedBackOff;
  * IMPORTANTE (bug real encontrado probando en vivo contra el cluster con AUTO_CREATE_TOPICS_ENABLE=false):
  * si el topico ".dlt" no existe, el productor del recoverer reintenta para siempre pidiendo
  * metadata ("UNKNOWN_TOPIC_OR_PARTITION") y BLOQUEA el hilo consumidor completo -- ni siquiera
- * los mensajes SIGUIENTES, validos, se procesan. Por eso los topicos DLT se declaran aca como
- * beans NewTopic: el KafkaAdmin autoconfigurado por Spring Boot los crea solo al arrancar,
- * sin depender de que alguien los haya creado antes a mano en ms-campuslab-kafka-admin.
- * Mismo numero de particiones que los topicos de negocio (3): si el DLT tuviera menos
+ * los mensajes SIGUIENTES, validos, se procesan. Por eso el topico DLT se declara aca como
+ * bean NewTopic: el KafkaAdmin autoconfigurado por Spring Boot lo crea solo al arrancar,
+ * sin depender de que alguien lo haya creado antes a mano en ms-campuslab-kafka-admin.
+ * Mismo numero de particiones que el topico de negocio (3): si el DLT tuviera menos
  * particiones, reenviar un mensaje de la particion 1 o 2 fallaria igual.
  */
 @Configuration
@@ -35,11 +35,6 @@ public class KafkaConsumerConfig {
     @Bean
     NewTopic topicoVentasDlt(KafkaTopicsProperties props) {
         return new NewTopic(props.topicoVentas() + ".dlt", 3, (short) 2);
-    }
-
-    @Bean
-    NewTopic topicoAuditoriaDlt(KafkaTopicsProperties props) {
-        return new NewTopic(props.topicoAuditoria() + ".dlt", 3, (short) 2);
     }
 
     @Bean

@@ -39,6 +39,19 @@ services:
     networks: [campuslab]
     restart: unless-stopped
 
+  notify:
+    build: ../../ms-campuslab-notify
+    container_name: campuslab-notify
+    environment:
+      RABBITMQ_HOST: ${RABBITMQ_HOST}
+      RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASS: ${RABBITMQ_PASS}
+    expose:
+      - "8086"
+    networks: [campuslab]
+    restart: unless-stopped
+
   bff:
     build: ../../ms-campuslab-bff
     container_name: campuslab-bff

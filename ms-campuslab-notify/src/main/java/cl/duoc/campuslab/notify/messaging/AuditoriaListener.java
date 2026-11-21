@@ -1,0 +1,50 @@
+package cl.duoc.campuslab.notify.messaging;
+
+import com.rabbitmq.client.Channel;
+import cl.duoc.campuslab.notify.config.RabbitMessagingProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.messaging.handler.annotation.Header;
+import org.springframework.stereotype.Service;
+
+/**
+ * CONSUMIDOR del dominio "auditoria". Registra en el log cada cambio del catalogo.
+ * Vive en ms-campuslab-notify (nunca en catalog, que es quien la publica) -- regla de diseno:
+ * productor y consumidor nunca son el mismo microservicio.
+ *
+ * Confirma los mensajes EXPLICITAMENTE (ACK manual) y distingue dos tipos de error
+ * (ver ManejadorErroresListener):
+ *  - NO recuperable (payload invalido / FORZAR_FALLO): NACK sin reencolar y RabbitMQ lo manda a la DLQ.
+ *  - Recuperable (p. ej. FALLO_TRANSITORIO): se reintenta con limite y, si se agotan, va a la DLQ.
+ */
+@Service
+public class AuditoriaListener {
+
+    private static final Logger log = LoggerFactory.getLogger(AuditoriaListener.class);
+
+    private final ManejadorErroresListener errores;
+    private final RabbitMessagingProperties props;
+
+    public AuditoriaListener(ManejadorErroresListener errores, RabbitMessagingProperties props) {
+        this.errores = errores;
+        this.props = props;
+    }
+
+    @RabbitListener(queues = "${campuslab.rabbitmq.queue-auditoria}")
+    public void recibir(String payload, Channel channel, @Header("amqp_deliveryTag") long deliveryTag,
+                        @Header(name = ManejadorErroresListener.HEADER_INTENTOS, required = false) Integer intentosPrevios) {
+        int intentos = intentosPrevios == null ? 0 : intentosPrevios;
+        try {
+            if (payload == null || payload.isBlank() || payload.contains("FORZAR_FALLO")) {
+                throw new IllegalArgumentException("Payload invalido para registro de auditoria");
+            }
+            errores.simularFalloTransitorio(payload, intentos);
+            log.info("🗂️ Registrando auditoria -> {}", payload);
+            channel.basicAck(deliveryTag, false);
+            log.info("✅ Auditoria confirmada (ACK)");
+        } catch (Exception e) {
+            errores.resolver(channel, deliveryTag, payload, intentos, props.exchange(), props.routingKeyAuditoria(), "auditoria", e);
+        }
+    }
+}

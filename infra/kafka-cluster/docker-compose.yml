@@ -44,6 +44,14 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
       KAFKA_MIN_INSYNC_REPLICAS: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      # Politica de retencion por defecto a nivel de broker (rubrica EP5, "parametros de
+      # administracion de topicos"). ms-campuslab-kafka-admin puede sobreescribirla por
+      # topico individual via AlterConfigOp (retention.ms/cleanup.policy), pero el default
+      # explicito queda aqui en vez de depender del implicito de la imagen (168h).
+      KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_LOG_RETENTION_BYTES: -1
+      KAFKA_LOG_SEGMENT_BYTES: 1073741824
+      KAFKA_LOG_CLEANUP_POLICY: delete
     volumes:
       - kafka_data_1:/var/lib/kafka/data
     networks:
@@ -69,6 +77,10 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
       KAFKA_MIN_INSYNC_REPLICAS: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_LOG_RETENTION_BYTES: -1
+      KAFKA_LOG_SEGMENT_BYTES: 1073741824
+      KAFKA_LOG_CLEANUP_POLICY: delete
     volumes:
       - kafka_data_2:/var/lib/kafka/data
     networks:

@@ -24,8 +24,13 @@ Parameters:
 
   ReporteriaBaseUrl:
     Type: String
-    Description: URL base del panel de reporteria/auditoria (EP5, http://<IP-elastica-EC2-Kafka>:8085), sin ruta.
+    Description: URL base del panel de ventas (EP5, http://<IP-elastica-EC2-Kafka>:8085), sin ruta.
     Default: http://54.164.1.235:8085
+
+  AuditoriaBaseUrl:
+    Type: String
+    Description: URL base del registro de auditoria (EP5, http://<IP-elastica-EC2-Kafka>:8087), sin ruta -- microservicio separado de ReporteriaBaseUrl.
+    Default: http://54.164.1.235:8087
 
   FrontendOriginNube:
     Type: String
@@ -436,7 +441,9 @@ Resources:
       AuthorizerId: !Ref CognitoJwtAuthorizer
       Target: !Join ['/', ['integrations', !Ref IntKafkaCarga]]
 
-  # ---------------- EP5: panel de reporteria/auditoria (front -> ms-campuslab-reporteria) ----------------
+  # ---------------- EP5: panel de ventas (front -> ms-campuslab-reporteria) y registro de
+  # auditoria (front -> ms-campuslab-auditoria) -- microservicios distintos, cada uno SOLO
+  # consume su propio topico Kafka (nunca el que publica bookings/catalog). ----------------
   IntReporteriaVentas:
     Type: AWS::ApiGatewayV2::Integration
     Properties:
@@ -453,7 +460,7 @@ Resources:
       IntegrationType: HTTP_PROXY
       IntegrationMethod: ANY
       PayloadFormatVersion: '1.0'
-      IntegrationUri: !Sub '${ReporteriaBaseUrl}/api/reporteria/auditoria'
+      IntegrationUri: !Sub '${AuditoriaBaseUrl}/api/reporteria/auditoria'
 
   RouteReporteriaVentasGet:
     Type: AWS::ApiGatewayV2::Route

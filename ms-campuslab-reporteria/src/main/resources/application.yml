@@ -24,18 +24,17 @@ spring:
     listener:
       ack-mode: record
 
-# Nombres de topicos y consumer groups CENTRALIZADOS (rubrica EP5, indicador 1, 12%).
-# Este microservicio SOLO CONSUME -- nunca publica en estos mismos topicos (regla de diseno:
+# Nombre de topico y consumer group CENTRALIZADOS (rubrica EP5, indicador 1, 12%).
+# Este microservicio SOLO CONSUME -- nunca publica en este mismo topico (regla de diseno:
 # el productor y el consumidor de un mismo flujo nunca pueden ser el mismo microservicio).
-# Productores reales: ms-campuslab-bookings (ventas) y ms-campuslab-catalog (auditoria).
+# Productor real: ms-campuslab-bookings. Auditoria vive en ms-campuslab-auditoria (su propio
+# microservicio, su propio topico) -- cada dominio, su propio consumidor.
 campuslab:
   kafka:
     topics:
       ventas: campuslab.ventas
-      auditoria: campuslab.auditoria
     consumer-groups:
       ventas: reporteria-ventas
-      auditoria: reporteria-auditoria
     # Reintentos de errores recuperables (parseo/BD transitoria) antes de enviar a la DLT (topico.dlt)
     max-reintentos: 3
     espera-reintento-ms: 1000
